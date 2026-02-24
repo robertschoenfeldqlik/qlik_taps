@@ -5,12 +5,12 @@ import {
   CheckCircle, XCircle, Clock, Loader, Square,
   Plug, Layers, Database, ChevronDown, ChevronUp,
   Copy, Download, Trash2, FileArchive, Server, ExternalLink,
-  ChevronRight, Beaker,
+  ChevronRight, Beaker, Send, Settings, ArrowRight,
 } from 'lucide-react';
 import {
   getConfigs, discoverTap, runTap, getTapRuns,
   deleteConfig, duplicateConfig, getExportUrl, importZip,
-  getMockStatus, getMockInfo,
+  getMockStatus, getMockInfo, getTargets,
 } from '../api/client';
 import Modal from '../components/shared/Modal';
 import Toast from '../components/shared/Toast';
@@ -163,6 +163,12 @@ export default function TapsPage() {
   const [importing, setImporting] = useState(false);
   const [mockInfo, setMockInfo] = useState(null);
 
+  // Target state
+  const [targets, setTargets] = useState([]);
+  const [targetModal, setTargetModal] = useState(null); // { configId, catalogJson? }
+  const [selectedTarget, setSelectedTarget] = useState('');
+  const [targetConfig, setTargetConfig] = useState('');
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -188,7 +194,7 @@ export default function TapsPage() {
     }
   }, []);
 
-  // Load mock API status
+  // Load mock API status & available targets
   useEffect(() => {
     getMockStatus()
       .then(({ data }) => {
@@ -199,6 +205,10 @@ export default function TapsPage() {
         }
       })
       .catch(() => {}); // Mock API not available
+
+    getTargets()
+      .then(({ data }) => setTargets(data))
+      .catch(() => {}); // targets endpoint not available
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -223,15 +233,31 @@ export default function TapsPage() {
     }
   };
 
-  const handleRun = async (configId, catalogJson) => {
+  const handleRun = async (configId, catalogJson, targetType, targetCfg) => {
     try {
       const options = catalogJson ? { catalog_json: catalogJson } : {};
+      if (targetType) {
+        options.target_type = targetType;
+        options.target_config = typeof targetCfg === 'string' ? JSON.parse(targetCfg) : targetCfg;
+      }
       const { data } = await runTap(configId, options);
       navigate(`/taps/runs/${data.id}`, { state: { streamToken: data.stream_token } });
     } catch (err) {
       const msg = err.response?.data?.error || 'Failed to start run';
       setToast({ visible: true, message: msg, type: 'error' });
     }
+  };
+
+  const openTargetModal = (configId, catalogJson) => {
+    setTargetModal({ configId, catalogJson });
+    setSelectedTarget('');
+    setTargetConfig('');
+  };
+
+  const handleRunWithTarget = () => {
+    if (!targetModal || !selectedTarget) return;
+    handleRun(targetModal.configId, targetModal.catalogJson, selectedTarget, targetConfig);
+    setTargetModal(null);
   };
 
   const handleViewRuns = async (configId) => {
@@ -437,6 +463,15 @@ export default function TapsPage() {
                       >
                         <Play size={14} /> Run
                       </button>
+                      {targets.length > 0 && (
+                        <button
+                          onClick={() => openTargetModal(config.id)}
+                          className="btn-secondary flex items-center gap-1.5 text-sm border-brand-200 text-brand-700 hover:bg-brand-50"
+                          title="Run with target"
+                        >
+                          <Send size={14} /> Target
+                        </button>
+                      )}
                       <button
                         onClick={() => handleViewRuns(config.id)}
                         className="btn-ghost flex items-center gap-1.5 text-sm"
@@ -569,6 +604,17 @@ export default function TapsPage() {
               <button onClick={() => setDiscoveryModal(null)} className="btn-secondary">
                 Close
               </button>
+              {targets.length > 0 && (
+                <button
+                  onClick={() => {
+                    openTargetModal(discoveryModal.configId, discoveryModal.catalog);
+                    setDiscoveryModal(null);
+                  }}
+                  className="btn-secondary flex items-center gap-2 border-brand-200 text-brand-700 hover:bg-brand-50"
+                >
+                  <Send size={16} /> Run with Target
+                </button>
+              )}
               <button
                 onClick={() => {
                   handleRun(discoveryModal.configId, discoveryModal.catalog);
@@ -595,6 +641,93 @@ export default function TapsPage() {
             </button>
           </div>
         )}
+      </Modal>
+
+      {/* Target Selection Modal */}
+      <Modal
+        isOpen={!!targetModal}
+        onClose={() => setTargetModal(null)}
+        title="Run with Target"
+        size="lg"
+      >
+        <div className="space-y-5">
+          <p className="text-sm text-gray-500">
+            Select a target to pipe Singer output to. Records will be sent to the target in real time.
+          </p>
+
+          {/* Target cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {targets.map(t => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setSelectedTarget(t.id);
+                  setTargetConfig(JSON.stringify(t.default_config, null, 2));
+                }}
+                className={`p-4 rounded-xl border-2 text-left transition-all duration-150 ${
+                  selectedTarget === t.id
+                    ? 'border-brand-500 bg-brand-50 shadow-sm'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="text-2xl mb-2">{t.icon}</div>
+                <div className="font-semibold text-sm text-gray-900">{t.name}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{t.description}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Target config editor */}
+          {selectedTarget && (
+            <div className="animate-fade-in">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                  Target Configuration
+                </label>
+                <button
+                  onClick={() => {
+                    const target = targets.find(t => t.id === selectedTarget);
+                    if (target) setTargetConfig(JSON.stringify(target.default_config, null, 2));
+                  }}
+                  className="text-[11px] text-brand-600 hover:text-brand-700 font-medium"
+                >
+                  Reset to defaults
+                </button>
+              </div>
+              <textarea
+                value={targetConfig}
+                onChange={(e) => setTargetConfig(e.target.value)}
+                rows={8}
+                className="input-field font-mono text-xs w-full"
+                spellCheck={false}
+              />
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-xs text-gray-400">
+              {selectedTarget && (
+                <>
+                  <ArrowRight size={12} />
+                  <span>tap → <strong className="text-gray-600">{targets.find(t => t.id === selectedTarget)?.name}</strong></span>
+                </>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setTargetModal(null)} className="btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={handleRunWithTarget}
+                disabled={!selectedTarget}
+                className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Play size={16} /> <Send size={14} /> Run with Target
+              </button>
+            </div>
+          </div>
+        </div>
       </Modal>
 
       {/* Delete Confirmation Modal */}

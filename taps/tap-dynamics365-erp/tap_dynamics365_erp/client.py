@@ -87,11 +87,15 @@ class DynamicsClient:
             if not config.get(key):
                 raise ValueError(f"Missing required config key: '{key}'")
 
+        self.config = config
         self.environment_url = config["environment_url"].rstrip("/")
         self.tenant_id = config["tenant_id"]
         self.client_id = config["client_id"]
         self.client_secret = config["client_secret"]
         self.user_agent = config.get("user_agent", "tap-dynamics365-erp")
+
+        # Optional: custom OAuth token URL (for mock testing)
+        self.oauth_token_url = config.get("oauth_token_url")
 
         # Validate environment URL format
         if not re.match(r'^https?://', self.environment_url):
@@ -122,7 +126,13 @@ class DynamicsClient:
         if self._access_token and time.time() < (self._token_expires_at - 30):
             return
 
-        token_url = TOKEN_URL_TEMPLATE.format(tenant_id=self.tenant_id)
+        # Use custom token URL if provided (e.g., for mock API testing),
+        # otherwise use the standard Azure AD token endpoint
+        if self.oauth_token_url:
+            token_url = self.oauth_token_url.format(tenant_id=self.tenant_id)
+        else:
+            token_url = TOKEN_URL_TEMPLATE.format(tenant_id=self.tenant_id)
+
         payload = {
             "grant_type": "client_credentials",
             "client_id": self.client_id,

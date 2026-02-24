@@ -38,6 +38,14 @@ const CREDENTIALS = {
   },
 };
 
+// D365 mock credentials (separate for Azure AD simulation)
+const D365_CREDENTIALS = {
+  tenant_id: 'mock-tenant-id',
+  client_id: 'mock-d365-client',
+  client_secret: 'mock-d365-secret-12345',
+  access_token: 'mock-d365-bearer-token-98765',
+};
+
 // ---------------------------------------------------------------------------
 // Data Templates
 // ---------------------------------------------------------------------------
@@ -63,7 +71,7 @@ function randomDate(rng, yearStart = 2023, yearEnd = 2025) {
 }
 
 // ---------------------------------------------------------------------------
-// Dataset Generators
+// REST API Dataset Generators
 // ---------------------------------------------------------------------------
 const GENERATORS = {
   contacts(rng, id) {
@@ -175,6 +183,245 @@ const AVAILABLE_DATASETS = Object.keys(GENERATORS);
 const TOTAL_RECORDS = 150;
 
 // ---------------------------------------------------------------------------
+// D365 OData Entity Set Generators
+// ---------------------------------------------------------------------------
+const DATA_AREAS = ['USMF', 'USRT', 'DAT'];
+const D365_PRODUCT_NAMES = ['Widget A', 'Gadget Pro', 'Component X', 'Assembly Kit', 'Raw Material', 'Service Pack', 'Module Z', 'Sensor Unit', 'Control Board', 'Power Supply'];
+const D365_CURRENCIES = ['USD', 'EUR', 'GBP'];
+const D365_STATUSES = ['Active', 'OnHold', 'Closed'];
+const D365_JOURNAL_TYPES = ['Daily', 'VendInvoiceRegister', 'Payment', 'Allocation', 'Approval'];
+const D365_ACCOUNT_TYPES = ['Revenue', 'Expense', 'Asset', 'Liability', 'Equity'];
+
+const D365_GENERATORS = {
+  LegalEntities(rng, id) {
+    const area = DATA_AREAS[id % DATA_AREAS.length];
+    return {
+      DataArea: area,
+      Name: `${pick(rng, COMPANIES)} - ${area}`,
+      LegalEntityId: area,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+      AddressCountryRegionId: 'US',
+    };
+  },
+  CustomerGroups(rng, id) {
+    return {
+      CustomerGroupId: `CG${String(100 + id).slice(1)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      Description: `Customer Group ${id}`,
+      PaymentTermId: `Net${pick(rng, ['30', '60', '90'])}`,
+    };
+  },
+  VendorGroups(rng, id) {
+    return {
+      VendorGroupId: `VG${String(100 + id).slice(1)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      Description: `Vendor Group ${id}`,
+      PaymentTermId: `Net${pick(rng, ['30', '45', '60'])}`,
+    };
+  },
+  MainAccounts(rng, id) {
+    return {
+      MainAccountId: `${String(100000 + id * 10)}`,
+      ChartOfAccounts: 'COA',
+      Name: `${pick(rng, D365_ACCOUNT_TYPES)} Account ${id}`,
+      MainAccountCategory: pick(rng, D365_ACCOUNT_TYPES),
+      DebitCreditDefault: rng() > 0.5 ? 'Debit' : 'Credit',
+    };
+  },
+  CustomersV3(rng, id) {
+    const first = pick(rng, FIRST_NAMES);
+    const last = pick(rng, LAST_NAMES);
+    return {
+      CustomerAccount: `CUST${String(10000 + id).slice(1)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      Name: `${first} ${last}`,
+      CustomerGroupId: `CG${String(100 + (id % 20)).slice(1)}`,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+      SalesTaxGroup: pick(rng, ['TAXABLE', 'EXEMPT', 'REDUCED']),
+      AddressStreet: `${Math.floor(rng() * 999) + 1} ${pick(rng, ['Main', 'Oak', 'Elm', 'Park', 'Commerce'])} St`,
+      AddressCity: pick(rng, ['New York', 'Chicago', 'Dallas', 'Seattle', 'Atlanta', 'Denver']),
+      AddressState: pick(rng, ['NY', 'IL', 'TX', 'WA', 'GA', 'CO']),
+      AddressZipCode: String(10000 + Math.floor(rng() * 90000)),
+    };
+  },
+  VendorsV2(rng, id) {
+    return {
+      VendorAccountNumber: `VEND${String(10000 + id).slice(1)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      VendorName: pick(rng, COMPANIES),
+      VendorGroupId: `VG${String(100 + (id % 15)).slice(1)}`,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+      PaymentTermId: `Net${pick(rng, ['30', '45', '60', '90'])}`,
+    };
+  },
+  ReleasedProductsV2(rng, id) {
+    return {
+      ItemNumber: `ITEM${String(10000 + id).slice(1)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      ProductName: `${pick(rng, D365_PRODUCT_NAMES)} ${id}`,
+      ProductType: pick(rng, ['Item', 'Service']),
+      ProductSubtype: pick(rng, ['Product', 'ProductMaster']),
+      SalesCurrencyCode: pick(rng, D365_CURRENCIES),
+      SalesPrice: Math.round(rng() * 50000 + 100) / 100,
+    };
+  },
+  InventoryWarehouses(rng, id) {
+    return {
+      WarehouseId: `WH${String(10 + id).slice(1)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      WarehouseName: `Warehouse ${pick(rng, ['Main', 'Central', 'East', 'West', 'North', 'South'])} ${id}`,
+      WarehouseType: pick(rng, ['Default', 'Transit', 'Quarantine']),
+    };
+  },
+  InventoryOnhandEntries(rng, id) {
+    return {
+      ItemNumber: `ITEM${String(10000 + (id % 50) + 1).slice(1)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      InventorySiteId: `SITE${Math.floor(id / 10) + 1}`,
+      WarehouseId: `WH${String(10 + (id % 8)).slice(1)}`,
+      AvailableQuantity: Math.floor(rng() * 10000),
+      OnOrderQuantity: Math.floor(rng() * 500),
+      ReservedQuantity: Math.floor(rng() * 200),
+    };
+  },
+  SalesOrderHeadersV2(rng, id) {
+    return {
+      SalesOrderNumber: `SO${String(100000 + id)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      CustomerAccount: `CUST${String(10000 + (id % 50) + 1).slice(1)}`,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+      SalesOrderStatus: pick(rng, ['Open', 'Confirmed', 'Picked', 'Invoiced', 'Cancelled']),
+      OrderCreatedDate: randomDate(rng, 2023, 2025),
+      ModifiedDateTime: randomDate(rng, 2024, 2025),
+      TotalAmount: Math.round(rng() * 100000 + 100) / 100,
+    };
+  },
+  SalesOrderLines(rng, id) {
+    return {
+      SalesOrderNumber: `SO${String(100000 + Math.floor(id / 3) + 1)}`,
+      SalesOrderLineNumber: (id % 3) + 1,
+      dataAreaId: pick(rng, DATA_AREAS),
+      ItemNumber: `ITEM${String(10000 + (id % 50) + 1).slice(1)}`,
+      Quantity: Math.floor(rng() * 100) + 1,
+      SalesPrice: Math.round(rng() * 10000 + 10) / 100,
+      LineAmount: Math.round(rng() * 50000 + 50) / 100,
+      ModifiedDateTime: randomDate(rng, 2024, 2025),
+    };
+  },
+  PurchaseOrderHeadersV2(rng, id) {
+    return {
+      PurchaseOrderNumber: `PO${String(100000 + id)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      VendorAccountNumber: `VEND${String(10000 + (id % 30) + 1).slice(1)}`,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+      PurchaseOrderStatus: pick(rng, ['Draft', 'Confirmed', 'Received', 'Invoiced']),
+      OrderCreatedDate: randomDate(rng, 2023, 2025),
+      ModifiedDateTime: randomDate(rng, 2024, 2025),
+    };
+  },
+  PurchaseOrderLines(rng, id) {
+    return {
+      PurchaseOrderNumber: `PO${String(100000 + Math.floor(id / 3) + 1)}`,
+      PurchaseOrderLineNumber: (id % 3) + 1,
+      dataAreaId: pick(rng, DATA_AREAS),
+      ItemNumber: `ITEM${String(10000 + (id % 50) + 1).slice(1)}`,
+      Quantity: Math.floor(rng() * 200) + 1,
+      PurchasePrice: Math.round(rng() * 5000 + 5) / 100,
+      ModifiedDateTime: randomDate(rng, 2024, 2025),
+    };
+  },
+  CustomerInvoiceHeaders(rng, id) {
+    return {
+      InvoiceId: `CI${String(100000 + id)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      CustomerAccount: `CUST${String(10000 + (id % 50) + 1).slice(1)}`,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+      InvoiceAmount: Math.round(rng() * 80000 + 100) / 100,
+      InvoiceDate: randomDate(rng, 2023, 2025),
+      SalesOrderNumber: `SO${String(100000 + (id % 80) + 1)}`,
+    };
+  },
+  CustomerInvoiceLines(rng, id) {
+    return {
+      InvoiceId: `CI${String(100000 + Math.floor(id / 3) + 1)}`,
+      InvoiceLineNumber: (id % 3) + 1,
+      dataAreaId: pick(rng, DATA_AREAS),
+      ItemNumber: `ITEM${String(10000 + (id % 50) + 1).slice(1)}`,
+      Quantity: Math.floor(rng() * 50) + 1,
+      LineAmount: Math.round(rng() * 20000 + 10) / 100,
+      InvoiceDate: randomDate(rng, 2023, 2025),
+    };
+  },
+  VendorInvoiceHeaders(rng, id) {
+    return {
+      HeaderReference: `VI${String(100000 + id)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      VendorAccountNumber: `VEND${String(10000 + (id % 30) + 1).slice(1)}`,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+      InvoiceAmount: Math.round(rng() * 60000 + 50) / 100,
+      InvoiceDate: randomDate(rng, 2023, 2025),
+      ModifiedDateTime: randomDate(rng, 2024, 2025),
+    };
+  },
+  VendorInvoiceLines(rng, id) {
+    return {
+      HeaderReference: `VI${String(100000 + Math.floor(id / 3) + 1)}`,
+      InvoiceLineNumber: (id % 3) + 1,
+      dataAreaId: pick(rng, DATA_AREAS),
+      ItemNumber: `ITEM${String(10000 + (id % 50) + 1).slice(1)}`,
+      Quantity: Math.floor(rng() * 100) + 1,
+      LineAmount: Math.round(rng() * 15000 + 10) / 100,
+      ModifiedDateTime: randomDate(rng, 2024, 2025),
+    };
+  },
+  LedgerJournalHeaders(rng, id) {
+    return {
+      JournalBatchNumber: `JRN${String(100000 + id)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      JournalName: `${pick(rng, D365_JOURNAL_TYPES)}Journal`,
+      Description: `${pick(rng, D365_JOURNAL_TYPES)} journal entry ${id}`,
+      PostedDate: randomDate(rng, 2023, 2025),
+    };
+  },
+  LedgerJournalLines(rng, id) {
+    return {
+      JournalBatchNumber: `JRN${String(100000 + Math.floor(id / 4) + 1)}`,
+      LineNumber: (id % 4) + 1,
+      dataAreaId: pick(rng, DATA_AREAS),
+      MainAccountId: `${String(100000 + (id % 30) * 10)}`,
+      DebitAmount: rng() > 0.5 ? Math.round(rng() * 50000) / 100 : 0,
+      CreditAmount: rng() > 0.5 ? Math.round(rng() * 50000) / 100 : 0,
+      CurrencyCode: pick(rng, D365_CURRENCIES),
+    };
+  },
+  GeneralJournalEntries(rng, id) {
+    return {
+      JournalNumber: `GJ${String(100000 + id)}`,
+      dataAreaId: pick(rng, DATA_AREAS),
+      PostingDate: randomDate(rng, 2023, 2025),
+      DocumentDate: randomDate(rng, 2023, 2025),
+      DocumentNumber: `DOC${String(200000 + id)}`,
+      JournalCategory: pick(rng, D365_JOURNAL_TYPES),
+      LedgerEntryAmount: Math.round(rng() * 100000 - 50000) / 100,
+    };
+  },
+  GeneralJournalAccountEntries(rng, id) {
+    return {
+      GeneralJournalAccountEntryRecId: id,
+      MainAccountId: `${String(100000 + (id % 30) * 10)}`,
+      PostingDate: randomDate(rng, 2023, 2025),
+      TransactionCurrencyAmount: Math.round(rng() * 80000 - 40000) / 100,
+      TransactionCurrencyCode: pick(rng, D365_CURRENCIES),
+      AccountingCurrencyAmount: Math.round(rng() * 80000 - 40000) / 100,
+      PostingType: pick(rng, ['Revenue', 'Expense', 'Balance']),
+    };
+  },
+};
+
+const D365_ENTITY_SETS = Object.keys(D365_GENERATORS);
+const D365_RECORDS_PER_ENTITY = 50;
+
+// ---------------------------------------------------------------------------
 // Dataset Cache — generate once per dataset, reuse across requests
 // ---------------------------------------------------------------------------
 const datasetCache = new Map();
@@ -192,6 +439,21 @@ function getDataset(name) {
   return records;
 }
 
+const d365Cache = new Map();
+
+function getD365Dataset(entitySetName) {
+  if (d365Cache.has(entitySetName)) return d365Cache.get(entitySetName);
+  const gen = D365_GENERATORS[entitySetName];
+  if (!gen) return null;
+  const rng = createSeededRNG(hashString('d365_' + entitySetName));
+  const records = [];
+  for (let i = 1; i <= D365_RECORDS_PER_ENTITY; i++) {
+    records.push(gen(rng, i));
+  }
+  d365Cache.set(entitySetName, records);
+  return records;
+}
+
 // ---------------------------------------------------------------------------
 // Authentication Middleware
 // ---------------------------------------------------------------------------
@@ -204,7 +466,9 @@ function validateAuth(req, res, next) {
   // Bearer token
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    if (token === CREDENTIALS.bearer_token.value || token === CREDENTIALS.oauth2.access_token) {
+    if (token === CREDENTIALS.bearer_token.value ||
+        token === CREDENTIALS.oauth2.access_token ||
+        token === D365_CREDENTIALS.access_token) {
       return next();
     }
     return res.status(401).json({
@@ -257,6 +521,28 @@ function validateAuth(req, res, next) {
   });
 }
 
+// D365-specific auth middleware (Bearer token only, matching Azure AD flow)
+function validateD365Auth(req, res, next) {
+  if (req.query.auth === 'none') return next();
+
+  const authHeader = req.headers.authorization || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    if (token === D365_CREDENTIALS.access_token ||
+        token === CREDENTIALS.oauth2.access_token ||
+        token === CREDENTIALS.bearer_token.value) {
+      return next();
+    }
+  }
+
+  return res.status(401).json({
+    error: {
+      code: 'Unauthorized',
+      message: 'Bearer token is missing or invalid. Obtain a token from the OAuth2 endpoint first.',
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Delay Middleware
 // ---------------------------------------------------------------------------
@@ -270,7 +556,7 @@ function applyDelay(req, res, next) {
 }
 
 // ---------------------------------------------------------------------------
-// Pagination Helpers
+// REST API Pagination Helpers
 // ---------------------------------------------------------------------------
 function paginatePage(records, req, baseUrl) {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -396,7 +682,7 @@ const PAGINATORS = {
 };
 
 // ---------------------------------------------------------------------------
-// Routes
+// Routes — REST API Mock
 // ---------------------------------------------------------------------------
 
 // GET /api/mock/ — Server info and available datasets
@@ -408,6 +694,8 @@ router.get('/', (req, res) => {
     base_url: baseUrl,
     datasets: AVAILABLE_DATASETS,
     records_per_dataset: TOTAL_RECORDS,
+    d365_entity_sets: D365_ENTITY_SETS,
+    d365_records_per_entity: D365_RECORDS_PER_ENTITY,
     auth_methods: {
       api_key: { header: 'X-API-Key', value: CREDENTIALS.api_key.value },
       bearer_token: { header: 'Authorization', value: `Bearer ${CREDENTIALS.bearer_token.value}` },
@@ -418,6 +706,12 @@ router.get('/', (req, res) => {
         client_secret: CREDENTIALS.oauth2.client_secret,
         grant_type: 'client_credentials',
       },
+    },
+    d365_auth: {
+      oauth_token_url: `${baseUrl}/oauth2/token`,
+      tenant_id: D365_CREDENTIALS.tenant_id,
+      client_id: D365_CREDENTIALS.client_id,
+      client_secret: D365_CREDENTIALS.client_secret,
     },
     pagination_styles: Object.keys(PAGINATORS),
     query_params: {
@@ -435,7 +729,7 @@ router.get('/', (req, res) => {
   });
 });
 
-// POST /api/mock/oauth2/token — OAuth2 token exchange
+// POST /api/mock/oauth2/token — OAuth2 token exchange (works for both REST and D365)
 router.post('/oauth2/token', (req, res) => {
   const { client_id, client_secret, grant_type } = req.body || {};
 
@@ -446,25 +740,128 @@ router.post('/oauth2/token', (req, res) => {
     });
   }
 
-  if (client_id !== CREDENTIALS.oauth2.client_id || client_secret !== CREDENTIALS.oauth2.client_secret) {
-    return res.status(401).json({
-      error: 'invalid_client',
-      error_description: 'Invalid client_id or client_secret.',
-      hint: `Use client_id="${CREDENTIALS.oauth2.client_id}" and client_secret="${CREDENTIALS.oauth2.client_secret}"`,
+  // Accept both REST and D365 credentials
+  if ((client_id === CREDENTIALS.oauth2.client_id && client_secret === CREDENTIALS.oauth2.client_secret) ||
+      (client_id === D365_CREDENTIALS.client_id && client_secret === D365_CREDENTIALS.client_secret)) {
+    const token = client_id === D365_CREDENTIALS.client_id
+      ? D365_CREDENTIALS.access_token
+      : CREDENTIALS.oauth2.access_token;
+    return res.json({
+      access_token: token,
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: req.body.scope || 'read',
     });
   }
 
-  res.json({
-    access_token: CREDENTIALS.oauth2.access_token,
-    token_type: 'bearer',
-    expires_in: 3600,
-    scope: 'read',
+  return res.status(401).json({
+    error: 'invalid_client',
+    error_description: 'Invalid client_id or client_secret.',
+    hint: `For REST: client_id="${CREDENTIALS.oauth2.client_id}", client_secret="${CREDENTIALS.oauth2.client_secret}". For D365: client_id="${D365_CREDENTIALS.client_id}", client_secret="${D365_CREDENTIALS.client_secret}"`,
   });
 });
+
+// ---------------------------------------------------------------------------
+// Routes — D365 OData Mock (under /api/mock/data)
+// ---------------------------------------------------------------------------
+
+// GET /api/mock/data — OData service document (entity set listing)
+router.get('/data', validateD365Auth, applyDelay, (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get('host')}/api/mock/data`;
+  res.json({
+    '@odata.context': `${baseUrl}/$metadata`,
+    value: D365_ENTITY_SETS.map(name => ({
+      name,
+      kind: 'EntitySet',
+      url: name,
+    })),
+  });
+});
+
+// GET /api/mock/data/:entitySet — OData entity set with @odata.nextLink pagination
+router.get('/data/:entitySet', validateD365Auth, applyDelay, (req, res) => {
+  const { entitySet } = req.params;
+  const records = getD365Dataset(entitySet);
+
+  if (!records) {
+    return res.status(404).json({
+      error: {
+        code: 'EntitySetNotFound',
+        message: `Entity set "${entitySet}" not found.`,
+        available: D365_ENTITY_SETS,
+      },
+    });
+  }
+
+  // Apply OData $filter if present (simple string contains check for mock purposes)
+  let filtered = records;
+  if (req.query.$filter) {
+    // Basic support: field ge 'value' or field eq 'value'
+    const filterMatch = req.query.$filter.match(/(\w+)\s+(ge|gt|eq)\s+'?([^']*)'?/i);
+    if (filterMatch) {
+      const [, field, op, value] = filterMatch;
+      filtered = records.filter(r => {
+        const val = r[field];
+        if (!val) return true; // include records without the field
+        if (op === 'ge') return String(val) >= value;
+        if (op === 'gt') return String(val) > value;
+        if (op === 'eq') return String(val) === value;
+        return true;
+      });
+    }
+  }
+
+  // Apply OData $orderby if present
+  if (req.query.$orderby) {
+    const [field, dir] = req.query.$orderby.split(/\s+/);
+    const mult = (dir || '').toLowerCase() === 'desc' ? -1 : 1;
+    filtered = [...filtered].sort((a, b) => {
+      if (a[field] < b[field]) return -1 * mult;
+      if (a[field] > b[field]) return 1 * mult;
+      return 0;
+    });
+  }
+
+  // OData pagination via $skip/$top or Prefer: odata.maxpagesize
+  const prefer = req.headers.prefer || '';
+  const maxPageMatch = prefer.match(/odata\.maxpagesize=(\d+)/);
+  const defaultTop = maxPageMatch ? parseInt(maxPageMatch[1]) : 25;
+
+  const skip = Math.max(parseInt(req.query.$skip) || 0, 0);
+  const top = Math.min(parseInt(req.query.$top) || defaultTop, 10000);
+  const page = filtered.slice(skip, skip + top);
+  const nextSkip = skip + top;
+
+  const baseUrl = `${req.protocol}://${req.get('host')}/api/mock/data/${entitySet}`;
+  const body = {
+    '@odata.context': `${baseUrl}/$metadata#${entitySet}`,
+    value: page,
+  };
+
+  // Add cross-company param back if present
+  const crossCompany = req.query['cross-company'] === 'true' ? '&cross-company=true' : '';
+
+  if (nextSkip < filtered.length) {
+    body['@odata.nextLink'] = `${baseUrl}?$skip=${nextSkip}&$top=${top}${crossCompany}`;
+  }
+
+  // Include OData headers
+  res.set('OData-Version', '4.0');
+  res.set('Content-Type', 'application/json; odata.metadata=minimal');
+  res.json(body);
+});
+
+// ---------------------------------------------------------------------------
+// Routes — REST API Datasets
+// ---------------------------------------------------------------------------
 
 // GET /api/mock/:dataset — Paginated list endpoint
 router.get('/:dataset', validateAuth, applyDelay, (req, res) => {
   const { dataset } = req.params;
+
+  // Skip if it matches a D365 entity set name (handled above)
+  if (dataset === 'data') return;
+
   const records = getDataset(dataset);
 
   if (!records) {
@@ -500,6 +897,10 @@ router.get('/:dataset', validateAuth, applyDelay, (req, res) => {
 // GET /api/mock/:dataset/:id — Single record detail
 router.get('/:dataset/:id', validateAuth, applyDelay, (req, res) => {
   const { dataset, id } = req.params;
+
+  // Skip if dataset is 'data' (D365 routes handle /data/:entitySet)
+  if (dataset === 'data') return;
+
   const records = getDataset(dataset);
 
   if (!records) {

@@ -8,16 +8,22 @@ export default {
       },
       colors: {
         brand: {
-          50: '#f0f4ff',
-          100: '#dbe4ff',
-          200: '#bac8ff',
-          300: '#91a7ff',
-          400: '#748ffc',
-          500: '#5c7cfa',
-          600: '#4c6ef5',
-          700: '#4263eb',
-          800: '#3b5bdb',
-          900: '#364fc7',
+          50: '#edfcf2',
+          100: '#d5f6e2',
+          200: '#aeecc8',
+          300: '#79dca7',
+          400: '#42c583',
+          500: '#1aab65',
+          600: '#008936',
+          700: '#156037',
+          800: '#0e4f2d',
+          900: '#0c4026',
+        },
+        qlik: {
+          green: '#008936',
+          teal: '#006580',
+          navy: '#194270',
+          dark: '#0d2137',
         },
         slate: {
           850: '#1a2332',
@@ -28,7 +34,7 @@ export default {
         'xs': '0 1px 2px 0 rgb(0 0 0 / 0.03)',
         'card': '0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04)',
         'elevated': '0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04)',
-        'glow-brand': '0 0 0 3px rgb(92 124 250 / 0.15)',
+        'glow-brand': '0 0 0 3px rgb(0 137 54 / 0.15)',
       },
       keyframes: {
         'slide-in': {

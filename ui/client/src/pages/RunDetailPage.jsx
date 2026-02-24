@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, Square, Clock, Hash, Layers, AlertTriangle,
   CheckCircle, XCircle, Loader, Play, Timer, Table, ChevronDown, ChevronRight,
+  Send, ArrowRight,
 } from 'lucide-react';
 import { getTapRun, stopTapRun, getRunStreamUrl } from '../api/client';
 import Toast from '../components/shared/Toast';
@@ -50,6 +51,7 @@ function formatDuration(startedAt, completedAt) {
 }
 
 function classifyLine(line) {
+  if (line.startsWith('[target]')) return 'target';
   if (line.startsWith('[stderr]')) return 'stderr';
   try {
     const msg = JSON.parse(line);
@@ -65,6 +67,7 @@ const LINE_COLORS = {
   schema: 'text-blue-400',
   state: 'text-yellow-400',
   stderr: 'text-red-400',
+  target: 'text-cyan-400',
   default: 'text-gray-300',
 };
 
@@ -320,6 +323,27 @@ export default function RunDetailPage() {
         ))}
       </div>
 
+      {/* Target info panel */}
+      {run.target_type && (
+        <div className="mb-6 card border-cyan-200 bg-gradient-to-r from-cyan-50/50 to-white animate-fade-in">
+          <div className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-cyan-100 flex items-center justify-center">
+              <Send size={18} className="text-cyan-600" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm text-gray-900">Target</span>
+                <ArrowRight size={14} className="text-gray-400" />
+                <span className="badge bg-cyan-50 text-cyan-700 font-mono">{run.target_type}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Records are being piped from the tap to the target in real time
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Data sample panel */}
       {run.sample_records && <DataSamplePanel sampleRecords={run.sample_records} />}
 
@@ -394,6 +418,9 @@ export default function RunDetailPage() {
         </span>
         <span className="flex items-center gap-1.5">
           <span className="badge bg-red-900/30 text-red-400 px-1.5 py-0 text-[10px]">stderr</span>
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="badge bg-cyan-900/30 text-cyan-400 px-1.5 py-0 text-[10px]">target</span>
         </span>
       </div>
 

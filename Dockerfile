@@ -68,13 +68,24 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 COPY taps/tap-dynamics365-erp/tap_dynamics365_erp/ tap_dynamics365_erp/
 RUN pip install --no-cache-dir .
 
-# --- Target virtualenv (common targets pre-installed) ---
+# --- Target virtualenv (CSV + JSONL targets) ---
 RUN python -m venv /opt/target-venv
 ENV PATH="/opt/target-venv/bin:$PATH"
+
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir \
         target-csv \
         target-jsonl
+
+# --- Kafka target virtualenv (separate due to jsonschema version conflict) ---
+RUN python -m venv /opt/kafka-venv
+ENV PATH="/opt/kafka-venv/bin:$PATH"
+
+WORKDIR /build/target-kafka
+COPY taps/target-confluent-kafka/setup.py ./
+COPY taps/target-confluent-kafka/target_confluent_kafka/__init__.py target_confluent_kafka/__init__.py
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -e .
 
 # --- Singer tools virtualenv (validation & debugging) ---
 RUN python -m venv /opt/tools-venv
@@ -146,6 +157,7 @@ WORKDIR /app
 COPY --from=python-builder /opt/tap-venv      /opt/tap-venv
 COPY --from=python-builder /opt/dynamics-venv /opt/dynamics-venv
 COPY --from=python-builder /opt/target-venv   /opt/target-venv
+COPY --from=python-builder /opt/kafka-venv    /opt/kafka-venv
 COPY --from=python-builder /opt/tools-venv    /opt/tools-venv
 
 # Fix virtualenv Python symlinks: builder used /usr/local/bin/python,
@@ -156,12 +168,15 @@ RUN ln -sf /usr/bin/python3 /opt/tap-venv/bin/python && \
     ln -sf /usr/bin/python3 /opt/dynamics-venv/bin/python3 && \
     ln -sf /usr/bin/python3 /opt/target-venv/bin/python && \
     ln -sf /usr/bin/python3 /opt/target-venv/bin/python3 && \
+    ln -sf /usr/bin/python3 /opt/kafka-venv/bin/python && \
+    ln -sf /usr/bin/python3 /opt/kafka-venv/bin/python3 && \
     ln -sf /usr/bin/python3 /opt/tools-venv/bin/python && \
     ln -sf /usr/bin/python3 /opt/tools-venv/bin/python3 && \
     sed -i '1s|.*|#!/opt/tap-venv/bin/python|' /opt/tap-venv/bin/tap-rest-api && \
     sed -i '1s|.*|#!/opt/dynamics-venv/bin/python|' /opt/dynamics-venv/bin/tap-dynamics365-erp && \
     sed -i '1s|.*|#!/opt/target-venv/bin/python|' /opt/target-venv/bin/target-csv && \
-    sed -i '1s|.*|#!/opt/target-venv/bin/python|' /opt/target-venv/bin/target-jsonl
+    sed -i '1s|.*|#!/opt/target-venv/bin/python|' /opt/target-venv/bin/target-jsonl && \
+    sed -i '1s|.*|#!/opt/kafka-venv/bin/python|' /opt/kafka-venv/bin/target-confluent-kafka
 
 # --- Copy Node.js server with production deps ---
 COPY --from=node-deps /app/server/node_modules server/node_modules
@@ -180,7 +195,7 @@ COPY taps/tap-rest-api-generic/healthcheck.sh    /app/healthcheck.sh
 RUN chmod +x /app/*.sh
 
 # All virtualenvs on PATH so Node.js can spawn tap-rest-api and tap-dynamics365-erp
-ENV PATH="/opt/tap-venv/bin:/opt/dynamics-venv/bin:/opt/target-venv/bin:/opt/tools-venv/bin:$PATH" \
+ENV PATH="/opt/tap-venv/bin:/opt/dynamics-venv/bin:/opt/target-venv/bin:/opt/kafka-venv/bin:/opt/tools-venv/bin:$PATH" \
     NODE_ENV=production \
     PORT=9090 \
     PYTHONUNBUFFERED=1 \

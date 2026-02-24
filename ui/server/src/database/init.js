@@ -60,6 +60,14 @@ async function getDb() {
     db.run(`ALTER TABLE tap_runs ADD COLUMN sample_records TEXT DEFAULT ''`);
   } catch (e) { /* column already exists */ }
 
+  try {
+    db.run(`ALTER TABLE tap_runs ADD COLUMN target_type TEXT DEFAULT ''`);
+  } catch (e) { /* column already exists */ }
+
+  try {
+    db.run(`ALTER TABLE tap_runs ADD COLUMN target_config TEXT DEFAULT ''`);
+  } catch (e) { /* column already exists */ }
+
   // Encrypt any existing plaintext credentials
   migrateEncryptConfigs();
 

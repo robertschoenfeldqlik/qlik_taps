@@ -50,6 +50,9 @@ const MAX_SAMPLE_PER_STREAM = 5;
 // Whitelist of allowed tap binary names
 const ALLOWED_TAPS = new Set(['tap-rest-api', 'tap-dynamics365-erp']);
 
+// Whitelist of allowed target binary names
+const ALLOWED_TARGETS = new Set(['target-csv', 'target-jsonl', 'target-confluent-kafka']);
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -117,9 +120,17 @@ function writeTempCatalog(runId, catalogJson) {
   return catalogPath;
 }
 
+/** Write target config JSON to a temp file and return the path. */
+function writeTempTargetConfig(runId, targetConfig) {
+  fs.mkdirSync(TMP_DIR, { recursive: true, mode: 0o700 });
+  const configPath = path.join(TMP_DIR, `target_config_${runId}.json`);
+  fs.writeFileSync(configPath, JSON.stringify(targetConfig, null, 2), { mode: 0o600 });
+  return configPath;
+}
+
 /** Remove temp files for a given run. */
 function cleanupTempFiles(runId) {
-  const names = [`config_${runId}.json`, `catalog_${runId}.json`];
+  const names = [`config_${runId}.json`, `catalog_${runId}.json`, `target_config_${runId}.json`];
   for (const name of names) {
     try { fs.unlinkSync(path.join(TMP_DIR, name)); } catch (e) { /* ignore */ }
   }
@@ -129,6 +140,7 @@ function cleanupTempFiles(runId) {
 const ALLOWED_RUN_COLUMNS = new Set([
   'status', 'completed_at', 'records_synced', 'streams_discovered',
   'catalog_json', 'output_log', 'error_message', 'state_json', 'sample_records',
+  'target_type', 'target_config',
 ]);
 
 /** Update a tap_run row in the database. */
@@ -357,12 +369,52 @@ router.post('/run', async (req, res) => {
       env: buildSafeEnv(),
     });
 
+    // --- Optional: spawn target process and pipe tap -> target ---
+    let targetProcess = null;
+    const targetType = req.body.target_type || '';
+    const targetConfig = req.body.target_config || null;
+
+    if (targetType && ALLOWED_TARGETS.has(targetType) && targetConfig) {
+      const targetConfigPath = writeTempTargetConfig(runId, targetConfig);
+      targetProcess = spawn(targetType, ['--config', targetConfigPath], {
+        env: buildSafeEnv(),
+      });
+
+      // Log target stderr
+      targetProcess.stderr.on('data', (chunk) => {
+        const lines = chunk.toString().split('\n');
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const tagged = `[target] ${line}`;
+          if (runState) {
+            runState.logBuffer.push(tagged);
+            broadcastToClients(runId, { type: 'log', line: tagged });
+          }
+        }
+      });
+
+      targetProcess.on('error', (err) => {
+        const msg = `Target error: ${err.message}`;
+        if (runState) {
+          runState.logBuffer.push(`[target] ${msg}`);
+          broadcastToClients(runId, { type: 'log', line: `[target] ${msg}` });
+        }
+      });
+
+      // Update DB with target info
+      updateRun(runId, {
+        target_type: targetType,
+        target_config: JSON.stringify(targetConfig),
+      });
+    }
+
     // Track active run
     const runState = {
       runId,
       configId,
       status: 'running',
       process: tapProcess,
+      targetProcess,
       clients: [],
       logBuffer: [],
       recordCount: 0,
@@ -383,6 +435,11 @@ router.post('/run', async (req, res) => {
     let stdoutPartial = '';
 
     tapProcess.stdout.on('data', (chunk) => {
+      // Forward raw bytes to target process if piping
+      if (targetProcess && targetProcess.stdin && !targetProcess.stdin.destroyed) {
+        try { targetProcess.stdin.write(chunk); } catch (e) { /* ignore */ }
+      }
+
       stdoutPartial += chunk.toString();
       const lines = stdoutPartial.split('\n');
       // Keep the last partial line
@@ -479,6 +536,11 @@ router.post('/run', async (req, res) => {
     tapProcess.on('close', async (code) => {
       clearTimeout(processTimeout);
       clearInterval(statusInterval);
+
+      // Close the target's stdin so it can finish processing
+      if (targetProcess && targetProcess.stdin && !targetProcess.stdin.destroyed) {
+        try { targetProcess.stdin.end(); } catch (e) { /* ignore */ }
+      }
 
       // Flush any remaining partial data
       if (stdoutPartial.trim()) {
@@ -721,6 +783,8 @@ router.get('/runs/:id', async (req, res) => {
       error_message: row.error_message || '',
       state_json: row.state_json || '',
       sample_records: sampleRecords,
+      target_type: row.target_type || '',
+      target_config: row.target_config || '',
     });
   } catch (err) {
     console.error('Error getting run:', err);
@@ -769,6 +833,41 @@ router.post('/runs/:id/stop', async (req, res) => {
   cleanupTempFiles(runId);
 
   res.json({ message: 'Run stopped', id: runId });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/taps/targets — List available target types
+// ---------------------------------------------------------------------------
+router.get('/targets', (req, res) => {
+  res.json([
+    {
+      id: 'target-csv',
+      name: 'CSV Files',
+      description: 'Write records to CSV files in /app/output',
+      icon: '📄',
+      default_config: { destination_path: '/app/output', delimiter: ',' },
+    },
+    {
+      id: 'target-jsonl',
+      name: 'JSON Lines',
+      description: 'Write records to JSONL files in /app/output',
+      icon: '📋',
+      default_config: { destination_path: '/app/output', do_timestamp_file: false },
+    },
+    {
+      id: 'target-confluent-kafka',
+      name: 'Confluent Kafka',
+      description: 'Produce records to Kafka topics (one topic per stream)',
+      icon: '📡',
+      default_config: {
+        bootstrap_servers: 'kafka:29092',
+        topic_prefix: 'singer-',
+        flush_interval: 1000,
+        compression_type: 'gzip',
+        security_protocol: 'PLAINTEXT',
+      },
+    },
+  ]);
 });
 
 // ---------------------------------------------------------------------------

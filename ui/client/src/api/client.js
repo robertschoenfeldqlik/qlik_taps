@@ -51,4 +51,7 @@ export const getRunStreamUrl = (runId) =>
 export const getMockStatus = () => api.get('/mock-status');
 export const getMockInfo = () => api.get('/mock/');
 
+// ---- Targets ----
+export const getTargets = () => api.get('/taps/targets');
+
 export default api;

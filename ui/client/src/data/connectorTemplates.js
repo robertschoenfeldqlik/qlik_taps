@@ -955,7 +955,7 @@ const CONNECTOR_TEMPLATES = [
     logo: '🧪',
     docsUrl: '',
     config: {
-      api_url: '/api/mock',
+      api_url: 'http://localhost:9090/api/mock',
       auth_method: 'api_key',
       api_key: 'mock-api-key-12345',
       api_key_name: 'X-API-Key',

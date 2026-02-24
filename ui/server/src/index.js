@@ -103,10 +103,30 @@ app.get('/api/mock-status', (req, res) => {
   });
 });
 
-// Health check (no rate limit)
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Health check (no rate limit) — available at both /health and /api/health
+const healthHandler = async (req, res) => {
+  let dbStatus = 'unknown';
+  let configCount = 0;
+  try {
+    const db = await getDb();
+    const result = db.exec('SELECT COUNT(*) as cnt FROM configs');
+    configCount = result.length ? result[0].values[0][0] : 0;
+    dbStatus = 'ok';
+  } catch (e) {
+    dbStatus = 'error';
+  }
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()) + 's',
+    database: dbStatus,
+    configs: configCount,
+    mock_api: process.env.MOCK_API_ENABLED !== 'false',
+    targets: ['csv', 'jsonl', 'confluent-kafka'],
+  });
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // ---------------------------------------------------------------------------
 // Serve static React build in production

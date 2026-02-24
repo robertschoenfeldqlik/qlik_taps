@@ -6,7 +6,13 @@ const path = require('path');
 const { getDb, saveDb } = require('../database/init');
 const { decryptConfig } = require('../crypto');
 const crypto = require('crypto');
-const { cleanConfig: sharedCleanConfig, detectTapBinary: sharedDetectTapBinary } = require('../../../shared/cleanConfig.js');
+
+// Dynamic import for ESM shared module (works in CJS since Node 12+)
+let sharedCleanConfig, sharedDetectTapBinary;
+const sharedReady = import('../../../shared/cleanConfig.js').then(mod => {
+  sharedCleanConfig = mod.cleanConfig;
+  sharedDetectTapBinary = mod.detectTapBinary;
+});
 
 const router = express.Router();
 
@@ -52,7 +58,8 @@ const ALLOWED_TAPS = new Set(['tap-rest-api', 'tap-dynamics365-erp']);
  * Detect which tap binary to use based on the config contents.
  * Delegates to shared module — single source of truth.
  */
-function detectTapBinary(configJson) {
+async function detectTapBinary(configJson) {
+  await sharedReady;
   return sharedDetectTapBinary(configJson);
 }
 
@@ -60,7 +67,8 @@ function detectTapBinary(configJson) {
  * Clean config for CLI consumption.
  * Delegates to shared module — single source of truth.
  */
-function cleanConfig(config) {
+async function cleanConfig(config) {
+  await sharedReady;
   return sharedCleanConfig(config);
 }
 
@@ -93,10 +101,11 @@ async function resolveConfig(body) {
 }
 
 /** Write cleaned config JSON to a temp file and return the path. */
-function writeTempConfig(runId, configJson) {
+async function writeTempConfig(runId, configJson) {
   fs.mkdirSync(TMP_DIR, { recursive: true, mode: 0o700 });
   const configPath = path.join(TMP_DIR, `config_${runId}.json`);
-  fs.writeFileSync(configPath, JSON.stringify(cleanConfig(configJson), null, 2), { mode: 0o600 });
+  const cleaned = await cleanConfig(configJson);
+  fs.writeFileSync(configPath, JSON.stringify(cleaned, null, 2), { mode: 0o600 });
   return configPath;
 }
 
@@ -180,10 +189,10 @@ router.post('/discover', async (req, res) => {
     saveDb();
 
     // Write config to temp file
-    const configPath = writeTempConfig(runId, configJson);
+    const configPath = await writeTempConfig(runId, configJson);
 
     // Detect which tap binary to use based on config contents
-    const tapBinary = detectTapBinary(configJson);
+    const tapBinary = await detectTapBinary(configJson);
     if (!ALLOWED_TAPS.has(tapBinary)) {
       return res.status(400).json({ error: `Invalid tap binary: ${tapBinary}` });
     }
@@ -329,8 +338,8 @@ router.post('/run', async (req, res) => {
     res.status(201).json({ id: runId, status: 'running', stream_token: runToken });
 
     // --- Background: spawn the tap process ---
-    const configPath = writeTempConfig(runId, configJson);
-    const tapBinary = detectTapBinary(configJson);
+    const configPath = await writeTempConfig(runId, configJson);
+    const tapBinary = await detectTapBinary(configJson);
     if (!ALLOWED_TAPS.has(tapBinary)) {
       return res.status(400).json({ error: `Invalid tap binary: ${tapBinary}` });
     }

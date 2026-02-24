@@ -39,8 +39,9 @@ WORKDIR /app
 # Copy client deps from stage 1
 COPY --from=deps /app/client/node_modules client/node_modules
 
-# Copy client source
+# Copy client source and shared module (client imports from ../../../../shared/)
 COPY client/ client/
+COPY shared/ shared/
 
 # Build production React bundle
 RUN cd client && npm run build
@@ -67,6 +68,9 @@ WORKDIR /app
 # Copy server with production deps from stage 1
 COPY --from=deps /app/server/node_modules server/node_modules
 COPY server/ server/
+
+# Copy shared modules (used by server for config cleaning)
+COPY shared/ shared/
 
 # Copy built React client from stage 2
 COPY --from=build /app/client/dist client/dist

@@ -8,7 +8,7 @@
  * Do NOT duplicate this logic elsewhere.
  */
 
-function cleanDynamicsConfig(config) {
+export function cleanDynamicsConfig(config) {
   const clean = {};
   if (config.environment_url) clean.environment_url = config.environment_url;
   if (config.tenant_id) clean.tenant_id = config.tenant_id;
@@ -18,13 +18,13 @@ function cleanDynamicsConfig(config) {
   return clean;
 }
 
-function detectTapBinary(configJson) {
+export function detectTapBinary(configJson) {
   if (configJson.tap_type === 'dynamics365') return 'tap-dynamics365-erp';
   if (configJson.environment_url && configJson.tenant_id) return 'tap-dynamics365-erp';
   return 'tap-rest-api';
 }
 
-function cleanConfig(config) {
+export function cleanConfig(config) {
   if (detectTapBinary(config) === 'tap-dynamics365-erp') {
     return cleanDynamicsConfig(config);
   }
@@ -103,7 +103,4 @@ function cleanConfig(config) {
   return clean;
 }
 
-// CommonJS export for server
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { cleanConfig, cleanDynamicsConfig, detectTapBinary };
-}
+export default cleanConfig;

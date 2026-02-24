@@ -109,8 +109,9 @@ WORKDIR /app
 # Copy client deps from stage 2
 COPY --from=node-deps /app/client/node_modules client/node_modules
 
-# Copy client source
+# Copy client source and shared module (client imports from ../../../../shared/)
 COPY ui/client/ client/
+COPY ui/shared/ shared/
 
 # Build production React bundle
 RUN cd client && npm run build
@@ -165,6 +166,9 @@ RUN ln -sf /usr/bin/python3 /opt/tap-venv/bin/python && \
 # --- Copy Node.js server with production deps ---
 COPY --from=node-deps /app/server/node_modules server/node_modules
 COPY ui/server/ server/
+
+# --- Copy shared modules (used by server for config cleaning) ---
+COPY ui/shared/ shared/
 
 # --- Copy built React client ---
 COPY --from=react-build /app/client/dist client/dist

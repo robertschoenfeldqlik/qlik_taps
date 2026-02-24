@@ -4,11 +4,13 @@ import {
   Play, Search, Compass, History, Edit3,
   CheckCircle, XCircle, Clock, Loader, Square,
   Plug, Layers, Database, ChevronDown, ChevronUp,
-  Copy, Download, Trash2, FileArchive,
+  Copy, Download, Trash2, FileArchive, Server, ExternalLink,
+  ChevronRight, Beaker,
 } from 'lucide-react';
 import {
   getConfigs, discoverTap, runTap, getTapRuns,
   deleteConfig, duplicateConfig, getExportUrl, importZip,
+  getMockStatus, getMockInfo,
 } from '../api/client';
 import Modal from '../components/shared/Modal';
 import Toast from '../components/shared/Toast';
@@ -25,7 +27,7 @@ const AUTH_LABELS = {
 function StatusBadge({ status }) {
   if (!status) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border bg-gray-50 text-gray-400 border-gray-200">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md border bg-gray-50 text-gray-400 border-gray-200">
         <Clock size={12} /> Never run
       </span>
     );
@@ -50,7 +52,7 @@ function StatusBadge({ status }) {
   const style = styles[status] || styles.pending;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${style}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md border ${style}`}>
       <Icon size={12} className={status === 'running' || status === 'discovering' ? 'animate-spin' : ''} />
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
@@ -69,6 +71,82 @@ function timeAgo(dateStr) {
   return `${days}d ago`;
 }
 
+/* ─── Mock API Info Banner ─────────────────────────────────────────── */
+function MockApiBanner({ mockInfo }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!mockInfo) return null;
+
+  return (
+    <div className="card border-brand-200 bg-gradient-to-r from-brand-50/50 to-white mb-6 animate-fade-in">
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-brand-100 flex items-center justify-center">
+              <Beaker size={18} className="text-brand-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 tracking-tight text-sm">Mock API Server</h3>
+              <p className="text-xs text-gray-500">
+                Built-in test server with {mockInfo.datasets?.length || 6} datasets — no real API credentials needed
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="btn-ghost flex items-center gap-1 text-xs"
+          >
+            {expanded ? 'Hide' : 'Show'} Details
+            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        </div>
+
+        {expanded && (
+          <div className="mt-4 pt-4 border-t border-brand-100 animate-fade-in space-y-4">
+            {/* Base URL */}
+            <div>
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Base URL</span>
+              <code className="block mt-1 text-sm font-mono text-brand-700 bg-brand-50 px-3 py-1.5 rounded-md">
+                {mockInfo.base_url || `${window.location.origin}/api/mock`}
+              </code>
+            </div>
+
+            {/* Datasets */}
+            <div>
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Available Datasets</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {(mockInfo.datasets || ['contacts', 'orders', 'products', 'events', 'users', 'invoices']).map(ds => (
+                  <span key={ds} className="badge bg-gray-50 text-gray-600">{ds}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Auth Methods */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Test Credentials</span>
+                <div className="mt-1.5 text-xs space-y-1 font-mono text-gray-600">
+                  <div><span className="text-gray-400">API Key:</span> mock-api-key-12345</div>
+                  <div><span className="text-gray-400">Bearer:</span> mock-bearer-token-12345</div>
+                  <div><span className="text-gray-400">Basic:</span> mock-user / mock-pass-12345</div>
+                </div>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Pagination Styles</span>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {['page', 'offset', 'cursor', 'link_header', 'jsonpath', 'odata'].map(p => (
+                    <span key={p} className="badge bg-purple-50 text-purple-600">{p}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TapsPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -83,6 +161,7 @@ export default function TapsPage() {
   const [configRuns, setConfigRuns] = useState([]); // runs for expanded config
   const [deleteModal, setDeleteModal] = useState(null); // config to delete
   const [importing, setImporting] = useState(false);
+  const [mockInfo, setMockInfo] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -107,6 +186,19 @@ export default function TapsPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Load mock API status
+  useEffect(() => {
+    getMockStatus()
+      .then(({ data }) => {
+        if (data.enabled) {
+          getMockInfo()
+            .then(({ data: info }) => setMockInfo(info))
+            .catch(() => setMockInfo({ enabled: true }));
+        }
+      })
+      .catch(() => {}); // Mock API not available
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -157,7 +249,7 @@ export default function TapsPage() {
     }
   };
 
-  // --- Config management handlers (from DashboardPage) ---
+  // --- Config management handlers ---
 
   const handleDelete = async () => {
     if (!deleteModal) return;
@@ -209,15 +301,15 @@ export default function TapsPage() {
   );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="page-header flex items-center gap-2.5">
             <Play size={28} className="text-brand-600" />
             Run Taps
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="page-subtitle">
             Execute tap discovery and sync from saved configurations
           </p>
         </div>
@@ -241,6 +333,9 @@ export default function TapsPage() {
         </div>
       </div>
 
+      {/* Mock API Banner */}
+      <MockApiBanner mockInfo={mockInfo} />
+
       {/* Search */}
       <div className="relative mb-6">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -255,9 +350,11 @@ export default function TapsPage() {
 
       {/* Tap Cards */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Loading...</div>
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full" />
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="card p-12 text-center">
+        <div className="card p-12 text-center animate-fade-in-up">
           <Database size={48} className="mx-auto text-gray-300 mb-3" />
           <h3 className="text-lg font-medium text-gray-600 mb-1">
             {search ? 'No matching taps' : 'No taps configured'}
@@ -283,27 +380,27 @@ export default function TapsPage() {
             const isExpanded = expandedRuns === config.id;
 
             return (
-              <div key={config.id} className="card hover:shadow-md transition-shadow">
-                <div className="p-4">
+              <div key={config.id} className="card hover:shadow-card transition-all duration-200 animate-fade-in-up">
+                <div className="p-5">
                   <div className="flex items-start justify-between">
                     {/* Left: tap info */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-800 mb-1 truncate">
+                      <h3 className="font-semibold text-gray-900 tracking-tight mb-1 truncate">
                         {config.name}
                       </h3>
                       {config.description && (
                         <p className="text-xs text-gray-400 mb-2 truncate">{config.description}</p>
                       )}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-2">
-                        <span className="flex items-center gap-1 font-mono truncate max-w-xs">
-                          <Plug size={12} />
+                      <div className="flex flex-wrap items-center gap-2 text-xs mb-2">
+                        <span className="badge bg-gray-50 text-gray-600 font-mono truncate max-w-xs">
+                          <Plug size={10} />
                           {config.api_url || '(no URL)'}
                         </span>
-                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">
+                        <span className="badge bg-blue-50 text-blue-700">
                           {AUTH_LABELS[config.auth_method] || config.auth_method}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Layers size={12} /> {config.stream_count} stream{config.stream_count !== 1 ? 's' : ''}
+                        <span className="badge bg-purple-50 text-purple-700">
+                          <Layers size={10} /> {config.stream_count} stream{config.stream_count !== 1 ? 's' : ''}
                         </span>
                       </div>
 
@@ -313,7 +410,7 @@ export default function TapsPage() {
                         {lastRun && (
                           <span className="text-gray-400">
                             {timeAgo(lastRun.completed_at || lastRun.started_at)}
-                            {lastRun.records_synced > 0 && ` \u00B7 ${lastRun.records_synced.toLocaleString()} records`}
+                            {lastRun.records_synced > 0 && ` · ${lastRun.records_synced.toLocaleString()} records`}
                           </span>
                         )}
                       </div>
@@ -382,8 +479,10 @@ export default function TapsPage() {
 
                   {/* Expanded run history */}
                   {isExpanded && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">Run History</h4>
+                    <div className="mt-4 pt-4 border-t border-gray-100 animate-fade-in">
+                      <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <ChevronRight size={12} /> Run History
+                      </h4>
                       {configRuns.length === 0 ? (
                         <p className="text-xs text-gray-400">No runs yet for this tap.</p>
                       ) : (
@@ -392,11 +491,11 @@ export default function TapsPage() {
                             <div
                               key={run.id}
                               onClick={() => navigate(`/taps/runs/${run.id}`)}
-                              className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer text-xs"
+                              className="flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50 cursor-pointer text-xs transition-colors duration-150"
                             >
                               <div className="flex items-center gap-3">
                                 <StatusBadge status={run.status} />
-                                <span className="text-gray-500">{run.mode}</span>
+                                <span className="text-gray-500 font-medium">{run.mode}</span>
                               </div>
                               <div className="flex items-center gap-4 text-gray-400">
                                 {run.records_synced > 0 && (
@@ -432,22 +531,22 @@ export default function TapsPage() {
             <p className="text-sm text-gray-500 mb-4">
               Found {discoveryModal.catalog.streams.length} stream{discoveryModal.catalog.streams.length !== 1 ? 's' : ''}.
             </p>
-            <div className="overflow-x-auto max-h-80 overflow-y-auto">
+            <div className="overflow-x-auto max-h-80 overflow-y-auto rounded-lg border border-gray-100">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="text-left px-3 py-2 font-medium text-gray-600">Stream Name</th>
-                    <th className="text-left px-3 py-2 font-medium text-gray-600">Replication</th>
-                    <th className="text-left px-3 py-2 font-medium text-gray-600">Key</th>
-                    <th className="text-right px-3 py-2 font-medium text-gray-600">Properties</th>
+                    <th className="text-left px-3 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wider">Stream Name</th>
+                    <th className="text-left px-3 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wider">Replication</th>
+                    <th className="text-left px-3 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wider">Key</th>
+                    <th className="text-right px-3 py-2.5 font-medium text-gray-600 text-xs uppercase tracking-wider">Properties</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {discoveryModal.catalog.streams.map((stream, idx) => (
-                    <tr key={idx} className="hover:bg-gray-50">
+                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-2 font-mono text-xs">{stream.stream || stream.tap_stream_id}</td>
                       <td className="px-3 py-2 text-xs">
-                        <span className={`px-1.5 py-0.5 rounded ${
+                        <span className={`badge ${
                           stream.replication_method === 'INCREMENTAL'
                             ? 'bg-blue-50 text-blue-700'
                             : 'bg-gray-100 text-gray-600'
@@ -466,7 +565,7 @@ export default function TapsPage() {
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-end gap-3 mt-4 pt-3 border-t">
+            <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
               <button onClick={() => setDiscoveryModal(null)} className="btn-secondary">
                 Close
               </button>
@@ -485,7 +584,7 @@ export default function TapsPage() {
           <div className="text-center py-8 text-gray-400">
             <p>No stream data available.</p>
             {discoveryModal?.catalog?.raw && (
-              <pre className="mt-4 text-left bg-gray-50 p-4 rounded text-xs overflow-auto max-h-60">
+              <pre className="mt-4 text-left bg-gray-50 p-4 rounded-lg text-xs overflow-auto max-h-60 border border-gray-100">
                 {typeof discoveryModal.catalog.raw === 'string'
                   ? discoveryModal.catalog.raw
                   : JSON.stringify(discoveryModal.catalog, null, 2)}

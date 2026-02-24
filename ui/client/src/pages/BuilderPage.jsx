@@ -25,13 +25,11 @@ export default function BuilderPage() {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const lastSaveRef = useRef(0);
 
-  // Load existing config for editing
   useEffect(() => {
     if (!isEditing) {
       setInitialConfig({});
       return;
     }
-
     const load = async () => {
       try {
         setLoading(true);
@@ -47,21 +45,15 @@ export default function BuilderPage() {
         setLoading(false);
       }
     };
-
     load();
   }, [id, isEditing, navigate]);
 
   const doSave = useCallback(async (name, description, configJson) => {
-    // Debounce: prevent rapid successive saves
     const now = Date.now();
-    if (now - lastSaveRef.current < SAVE_DEBOUNCE_MS) {
-      return;
-    }
+    if (now - lastSaveRef.current < SAVE_DEBOUNCE_MS) return;
     if (saving) return;
-
     setSaving(true);
     lastSaveRef.current = now;
-
     try {
       if (isEditing) {
         await updateConfig(id, { name, description, config_json: configJson });
@@ -83,7 +75,6 @@ export default function BuilderPage() {
   const handleSave = useCallback((config) => {
     const cleaned = cleanConfig(config);
     setPendingConfig(cleaned);
-
     if (isEditing) {
       doSave(configName, configDesc, cleaned);
     } else {
@@ -97,31 +88,32 @@ export default function BuilderPage() {
   };
 
   if (loading) {
-    return <div className="p-6 text-center text-gray-400">Loading...</div>;
+    return (
+      <div className="p-6 flex items-center justify-center h-64">
+        <div className="animate-spin w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full" />
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto animate-fade-in">
       {/* Top bar */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="btn-ghost flex items-center gap-1"
-          >
+          <button onClick={() => navigate(-1)} className="btn-ghost flex items-center gap-1">
             <ArrowLeft size={16} /> Back
           </button>
           <div>
             {isEditing ? (
               <input
                 type="text"
-                className="text-xl font-bold text-gray-800 bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-brand-500 focus:outline-none px-1 py-0.5 transition-colors"
+                className="text-xl font-bold text-gray-900 tracking-tight bg-transparent border-b-2 border-transparent hover:border-gray-300 focus:border-brand-500 focus:outline-none px-1 py-0.5 transition-all duration-200"
                 value={configName}
                 onChange={(e) => setConfigName(e.target.value)}
                 placeholder="Config Name"
               />
             ) : (
-              <h1 className="text-xl font-bold text-gray-800">New Configuration</h1>
+              <h1 className="page-header">New Configuration</h1>
             )}
           </div>
         </div>
@@ -143,25 +135,15 @@ export default function BuilderPage() {
       {/* Config Builder */}
       {initialConfig !== null && (
         <div className="card p-6">
-          <ConfigBuilder
-            initialConfig={initialConfig}
-            onSave={handleSave}
-          />
+          <ConfigBuilder initialConfig={initialConfig} onSave={handleSave} />
         </div>
       )}
 
       {/* Save Modal (for new configs) */}
-      <Modal
-        isOpen={saveModal}
-        onClose={() => setSaveModal(false)}
-        title="Save Configuration"
-        size="sm"
-      >
+      <Modal isOpen={saveModal} onClose={() => setSaveModal(false)} title="Save Configuration" size="sm">
         <div className="space-y-4">
           <div>
-            <label className="input-label">
-              Config Name <span className="text-red-500">*</span>
-            </label>
+            <label className="input-label">Config Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               className="input-field"
@@ -183,13 +165,7 @@ export default function BuilderPage() {
           </div>
           <div className="flex justify-end gap-3">
             <button onClick={() => setSaveModal(false)} className="btn-secondary">Cancel</button>
-            <button
-              onClick={handleModalSave}
-              className="btn-primary"
-              disabled={!configName.trim()}
-            >
-              Save
-            </button>
+            <button onClick={handleModalSave} className="btn-primary" disabled={!configName.trim()}>Save</button>
           </div>
         </div>
       </Modal>

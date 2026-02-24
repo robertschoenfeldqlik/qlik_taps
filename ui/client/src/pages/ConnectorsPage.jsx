@@ -33,19 +33,16 @@ export default function ConnectorsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [creating, setCreating] = useState(null); // id of connector being created
+  const [creating, setCreating] = useState(null);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
 
   const byCategory = useMemo(() => getConnectorsByCategory(), []);
 
-  // Filtered list
   const filtered = useMemo(() => {
     let results = CONNECTOR_TEMPLATES;
-
     if (selectedCategory !== 'All') {
       results = results.filter((c) => c.category === selectedCategory);
     }
-
     if (search.trim()) {
       const q = search.toLowerCase();
       results = results.filter(
@@ -55,18 +52,15 @@ export default function ConnectorsPage() {
           c.category.toLowerCase().includes(q)
       );
     }
-
     return results;
   }, [search, selectedCategory]);
 
-  // Group filtered results by category
   const groupedFiltered = useMemo(() => {
     const groups = {};
     for (const c of filtered) {
       if (!groups[c.category]) groups[c.category] = [];
       groups[c.category].push(c);
     }
-    // Sort categories by defined order
     return CATEGORY_ORDER
       .filter((cat) => groups[cat])
       .map((cat) => ({ category: cat, connectors: groups[cat] }));
@@ -80,33 +74,23 @@ export default function ConnectorsPage() {
   const handleUseConnector = async (connector) => {
     try {
       setCreating(connector.id);
-
-      // Deep-clone the template config
       const configJson = JSON.parse(JSON.stringify(connector.config));
-
       const { data } = await createConfig({
         name: connector.name,
         description: connector.description,
         config_json: configJson,
       });
-
       setToast({
         visible: true,
         message: `${connector.name} connector created! Redirecting to editor...`,
         type: 'success',
       });
-
-      // Navigate to the editor so the user can fill in credentials
       setTimeout(() => {
         navigate(`/configs/${data.id}/edit`);
       }, 600);
     } catch (err) {
       console.error('Failed to create connector config:', err);
-      setToast({
-        visible: true,
-        message: 'Failed to create connector config',
-        type: 'error',
-      });
+      setToast({ visible: true, message: 'Failed to create connector config', type: 'error' });
     } finally {
       setCreating(null);
     }
@@ -123,26 +107,22 @@ export default function ConnectorsPage() {
       navigate(`/configs/${data.id}/edit`);
     } catch (err) {
       console.error('Failed to create blank config:', err);
-      setToast({
-        visible: true,
-        message: 'Failed to create config',
-        type: 'error',
-      });
+      setToast({ visible: true, message: 'Failed to create config', type: 'error' });
     } finally {
       setCreating(null);
     }
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-6xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h1 className="page-header flex items-center gap-2.5">
             <Plug size={28} className="text-brand-600" />
             Connectors
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="page-subtitle">
             Pre-built REST API connector templates — pick one and start syncing in minutes
           </p>
         </div>
@@ -156,7 +136,7 @@ export default function ConnectorsPage() {
       </div>
 
       {/* Search + Category Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-8">
         <div className="relative flex-1">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -172,10 +152,10 @@ export default function ConnectorsPage() {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
                 selectedCategory === cat
-                  ? 'bg-brand-600 text-white border-brand-600'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-brand-300 hover:text-brand-700'
+                  ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 shadow-xs hover:border-brand-200 hover:text-brand-600 hover:shadow-sm'
               }`}
             >
               {cat}
@@ -189,25 +169,22 @@ export default function ConnectorsPage() {
 
       {/* Results */}
       {filtered.length === 0 ? (
-        <div className="card p-12 text-center">
+        <div className="card p-12 text-center animate-fade-in-up">
           <Plug size={48} className="mx-auto text-gray-300 mb-3" />
           <h3 className="text-lg font-medium text-gray-600 mb-1">No connectors found</h3>
           <p className="text-sm text-gray-400">
             Try a different search term or category, or{' '}
-            <button
-              onClick={handleBuildFromScratch}
-              className="text-brand-600 hover:underline"
-            >
+            <button onClick={handleBuildFromScratch} className="text-brand-600 hover:underline">
               build a custom config
             </button>
             .
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-10">
           {groupedFiltered.map(({ category, connectors }) => (
-            <div key={category}>
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <div key={category} className="animate-fade-in-up">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <ChevronRight size={14} />
                 {category}
               </h2>
@@ -215,17 +192,17 @@ export default function ConnectorsPage() {
                 {connectors.map((connector) => (
                   <div
                     key={connector.id}
-                    className="card hover:shadow-md transition-all hover:border-brand-200 group"
+                    className="card-interactive group"
                   >
-                    <div className="p-4">
+                    <div className="p-5">
                       {/* Logo + Name */}
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl" role="img" aria-label={connector.name}>
+                          <span className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-xl" role="img" aria-label={connector.name}>
                             {connector.logo}
                           </span>
                           <div>
-                            <h3 className="font-semibold text-gray-800">{connector.name}</h3>
+                            <h3 className="font-semibold text-gray-900 tracking-tight">{connector.name}</h3>
                             <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">
                               {connector.description}
                             </p>
@@ -234,19 +211,19 @@ export default function ConnectorsPage() {
                       </div>
 
                       {/* Meta badges */}
-                      <div className="flex flex-wrap items-center gap-2 text-xs mb-3 mt-3">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
+                      <div className="flex flex-wrap items-center gap-2 text-xs mb-3">
+                        <span className="badge bg-blue-50 text-blue-700">
                           <Shield size={10} />
                           {connector.config.tap_type === 'dynamics365'
                             ? 'OAuth 2.0 (Azure AD)'
                             : (AUTH_LABELS[connector.config.auth_method] || connector.config.auth_method)}
                         </span>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 rounded">
+                        <span className="badge bg-purple-50 text-purple-700">
                           <Layers size={10} />
                           {connector.config.streams.length} stream{connector.config.streams.length !== 1 ? 's' : ''}
                         </span>
                         {connector.tap_binary && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 rounded font-mono">
+                          <span className="badge bg-green-50 text-green-700 font-mono">
                             {connector.tap_binary}
                           </span>
                         )}
@@ -255,7 +232,7 @@ export default function ConnectorsPage() {
                             href={connector.docsUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 text-gray-500 rounded hover:text-brand-600 hover:bg-brand-50 transition-colors"
+                            className="badge bg-gray-50 text-gray-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink size={10} /> Docs
@@ -264,7 +241,7 @@ export default function ConnectorsPage() {
                       </div>
 
                       {/* Stream names */}
-                      <div className="text-xs text-gray-400 mb-3">
+                      <div className="text-xs text-gray-400 mb-4">
                         <span className="font-medium text-gray-500">Streams: </span>
                         {connector.config.streams
                           .map((s) => (typeof s === 'string' ? s : s.name))
@@ -277,7 +254,7 @@ export default function ConnectorsPage() {
                       <button
                         onClick={() => handleUseConnector(connector)}
                         disabled={creating === connector.id}
-                        className="w-full btn-primary flex items-center justify-center gap-2 text-sm group-hover:bg-brand-700 transition-colors"
+                        className="w-full btn-primary flex items-center justify-center gap-2 text-sm"
                       >
                         {creating === connector.id ? (
                           <>

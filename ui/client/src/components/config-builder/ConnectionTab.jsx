@@ -1,8 +1,30 @@
+import { useState, useEffect } from 'react';
+import { Beaker } from 'lucide-react';
 import KeyValueEditor from './KeyValueEditor';
+import { getMockStatus } from '../../api/client';
 
 export default function ConnectionTab({ config, onChange }) {
+  const [mockAvailable, setMockAvailable] = useState(false);
+
+  useEffect(() => {
+    getMockStatus()
+      .then(({ data }) => setMockAvailable(data.enabled))
+      .catch(() => setMockAvailable(false));
+  }, []);
+
   const update = (field, value) => {
     onChange({ ...config, [field]: value });
+  };
+
+  const fillMockApi = () => {
+    onChange({
+      ...config,
+      api_url: `${window.location.origin}/api/mock`,
+      auth_method: 'api_key',
+      api_key: 'mock-api-key-12345',
+      api_key_name: 'X-API-Key',
+      api_key_location: 'header',
+    });
   };
 
   // Convert headers object to/from key-value pairs
@@ -28,13 +50,25 @@ export default function ConnectionTab({ config, onChange }) {
         <label className="input-label">
           API Base URL <span className="text-red-500">*</span>
         </label>
-        <input
-          type="url"
-          className="input-field"
-          placeholder="https://api.example.com/v1"
-          value={config.api_url || ''}
-          onChange={(e) => update('api_url', e.target.value)}
-        />
+        <div className="flex gap-2">
+          <input
+            type="url"
+            className="input-field flex-1"
+            placeholder="https://api.example.com/v1"
+            value={config.api_url || ''}
+            onChange={(e) => update('api_url', e.target.value)}
+          />
+          {mockAvailable && (
+            <button
+              onClick={fillMockApi}
+              className="btn-secondary flex items-center gap-1.5 text-xs shrink-0"
+              title="Auto-fill with built-in Mock API server URL and credentials"
+            >
+              <Beaker size={14} />
+              Use Mock API
+            </button>
+          )}
+        </div>
         <p className="text-xs text-gray-400 mt-1">The base URL for all API requests. Stream paths are appended to this.</p>
       </div>
 
@@ -75,7 +109,7 @@ export default function ConnectionTab({ config, onChange }) {
       </div>
 
       {/* Separator */}
-      <hr className="border-gray-200" />
+      <div className="divider" />
 
       {/* Global Headers */}
       <KeyValueEditor

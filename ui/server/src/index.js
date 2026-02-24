@@ -7,6 +7,7 @@ const { getDb } = require('./database/init');
 const configsRouter = require('./routes/configs');
 const githubRouter = require('./routes/github');
 const tapsRouter = require('./routes/taps');
+const mockRouter = require('./routes/mock');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,10 +22,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:"],
       connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
     },
@@ -78,6 +79,29 @@ app.use('/api/github', apiLimiter, githubRouter);
 app.use('/api/taps/discover', tapLimiter);
 app.use('/api/taps/run', tapLimiter);
 app.use('/api/taps', apiLimiter, tapsRouter);
+
+// Mock API — built-in test endpoints for tap development
+if (process.env.MOCK_API_ENABLED !== 'false') {
+  const mockLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Mock API rate limit exceeded' },
+  });
+  // Support URL-encoded body for OAuth2 token endpoint
+  app.use('/api/mock/oauth2/token', express.urlencoded({ extended: false }));
+  app.use('/api/mock', mockLimiter, mockRouter);
+  console.log('Mock API enabled at /api/mock');
+}
+
+// Mock status endpoint (always available so UI can check)
+app.get('/api/mock-status', (req, res) => {
+  res.json({
+    enabled: process.env.MOCK_API_ENABLED !== 'false',
+    base_url: `${req.protocol}://${req.get('host')}/api/mock`,
+  });
+});
 
 // Health check (no rate limit)
 app.get('/api/health', (req, res) => {

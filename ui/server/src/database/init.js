@@ -71,6 +71,11 @@ async function getDb() {
   // Encrypt any existing plaintext credentials
   migrateEncryptConfigs();
 
+  // Seed default Run Tap configs (mock API, D365 mock, RandomUser.me)
+  // Only inserts when the configs table is empty (fresh container).
+  const { seedDefaultConfigs } = require('./seed');
+  seedDefaultConfigs(db, saveDb);
+
   saveDb();
   return db;
 }

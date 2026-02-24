@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "VendorAccountNumber": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "VendorGroupId": {"type": ["null", "string"]},
+    "VendorOrganizationName": {"type": ["null", "string"]},
+    "VendorPartyNumber": {"type": ["null", "string"]},
+    "VendorPartyType": {"type": ["null", "string"]},
+    "DefaultPaymentTermsName": {"type": ["null", "string"]},
+    "PaymentMethodName": {"type": ["null", "string"]},
+    "CurrencyCode": {"type": ["null", "string"]},
+    "SalesTaxGroupCode": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]},
+    "PrimaryContactEmail": {"type": ["null", "string"]},
+    "PrimaryContactPhone": {"type": ["null", "string"]},
+    "PrimaryContactURL": {"type": ["null", "string"]},
+    "AddressDescription": {"type": ["null", "string"]},
+    "AddressCity": {"type": ["null", "string"]},
+    "AddressState": {"type": ["null", "string"]},
+    "AddressZipCode": {"type": ["null", "string"]},
+    "AddressCountryRegionId": {"type": ["null", "string"]},
+    "AddressStreet": {"type": ["null", "string"]},
+    "OnHoldStatus": {"type": ["null", "string"]},
+    "IsOnHold": {"type": ["null", "string"]},
+    "DUNSNumber": {"type": ["null", "string"]}
+  }
+}

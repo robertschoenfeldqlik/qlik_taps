@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+venv/
+.venv/
+*.virtualenv
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Vite / build artifacts
+.vite/
+ui/client/dist/
+
+# Database (runtime)
+ui/server/data/*.db
+
+# State / runtime data
+state/
+output/
+logs/
+*.log
+
+# Temp files
+*.tmp
+*.bak
+
+# Environment / secrets
+.env
+.env.local
+.env.production
+
+# Claude Code settings (keep launch.json, ignore local settings)
+.claude/settings.local.json
+.claude/projects/
+
+# Duplicate / legacy directory
+tap-config-builder/
+
+# Archives
+*.zip

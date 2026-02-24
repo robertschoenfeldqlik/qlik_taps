@@ -1,0 +1,26 @@
+{
+    "_comment": "Example: API Key authentication (header-based)",
+
+    "api_url": "https://api.weatherapi.com/v1",
+    "auth_method": "api_key",
+    "api_key": "your-api-key-here",
+    "api_key_name": "key",
+    "api_key_location": "param",
+
+    "start_date": "2024-01-01T00:00:00Z",
+
+    "streams": [
+        {
+            "name": "forecast",
+            "path": "/forecast.json",
+            "primary_keys": [],
+            "replication_method": "FULL_TABLE",
+            "records_path": "$.forecast.forecastday",
+            "pagination_style": "none",
+            "params": {
+                "q": "New York",
+                "days": "7"
+            }
+        }
+    ]
+}

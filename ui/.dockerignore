@@ -1,0 +1,35 @@
+# Dependencies (installed in Docker build)
+server/node_modules
+client/node_modules
+node_modules
+
+# Build output (built in Docker build)
+client/dist
+
+# SQLite database (mounted as volume)
+server/data
+data
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker meta (avoid recursive context)
+docker-compose*.yml
+Dockerfile

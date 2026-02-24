@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "JournalBatchNumber": {"type": ["null", "string"]},
+    "LineNumber": {"type": ["null", "number"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "AccountDisplayValue": {"type": ["null", "string"]},
+    "OffsetAccountDisplayValue": {"type": ["null", "string"]},
+    "AccountType": {"type": ["null", "string"]},
+    "OffsetAccountType": {"type": ["null", "string"]},
+    "DebitAmount": {"type": ["null", "number"]},
+    "CreditAmount": {"type": ["null", "number"]},
+    "CurrencyCode": {"type": ["null", "string"]},
+    "TransactionDate": {"type": ["null", "string"], "format": "date-time"},
+    "Voucher": {"type": ["null", "string"]},
+    "Description": {"type": ["null", "string"]},
+    "DocumentNumber": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]}
+  }
+}

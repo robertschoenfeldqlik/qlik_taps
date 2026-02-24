@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "SalesOrderNumber": {"type": ["null", "string"]},
+    "SalesOrderLineNumber": {"type": ["null", "number"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "ItemNumber": {"type": ["null", "string"]},
+    "ProductName": {"type": ["null", "string"]},
+    "OrderedSalesQuantity": {"type": ["null", "number"]},
+    "SalesUnitSymbol": {"type": ["null", "string"]},
+    "SalesPrice": {"type": ["null", "number"]},
+    "LineAmount": {"type": ["null", "number"]},
+    "LineDiscountAmount": {"type": ["null", "number"]},
+    "LineDiscountPercentage": {"type": ["null", "number"]},
+    "SalesTaxAmount": {"type": ["null", "number"]},
+    "ShippingSiteId": {"type": ["null", "string"]},
+    "ShippingWarehouseId": {"type": ["null", "string"]},
+    "DeliveryAddressCity": {"type": ["null", "string"]},
+    "DeliveryAddressCountryRegionId": {"type": ["null", "string"]},
+    "RequestedShippingDate": {"type": ["null", "string"], "format": "date-time"},
+    "ConfirmedShippingDate": {"type": ["null", "string"], "format": "date-time"},
+    "SalesOrderLineStatus": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]},
+    "ModifiedDateTime": {"type": ["null", "string"], "format": "date-time"}
+  }
+}

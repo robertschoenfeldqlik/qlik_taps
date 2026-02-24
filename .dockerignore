@@ -1,0 +1,58 @@
+# Node.js
+node_modules
+ui/server/node_modules
+ui/client/node_modules
+ui/client/dist
+npm-debug.log*
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+.eggs/
+.venv
+venv
+
+# Git
+.git
+.gitignore
+
+# Tests & linting
+tests/
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime data (mounted as volumes, not baked in)
+ui/server/data
+data/
+config/
+output/
+state/
+logs/
+*.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other projects in same workspace (no longer needed — taps now self-contained)
+tap-config-builder/
+
+# Docker meta
+docker-compose*.yml
+
+# Docs
+*.md

@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "PurchaseOrderNumber": {"type": ["null", "string"]},
+    "PurchaseOrderLineNumber": {"type": ["null", "number"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "ItemNumber": {"type": ["null", "string"]},
+    "ProductName": {"type": ["null", "string"]},
+    "PurchaseQuantity": {"type": ["null", "number"]},
+    "PurchaseUnitSymbol": {"type": ["null", "string"]},
+    "PurchasePrice": {"type": ["null", "number"]},
+    "LineAmount": {"type": ["null", "number"]},
+    "LineDiscountAmount": {"type": ["null", "number"]},
+    "LineDiscountPercentage": {"type": ["null", "number"]},
+    "PurchaseOrderLineStatus": {"type": ["null", "string"]},
+    "ReceivingSiteId": {"type": ["null", "string"]},
+    "ReceivingWarehouseId": {"type": ["null", "string"]},
+    "RequestedDeliveryDate": {"type": ["null", "string"], "format": "date-time"},
+    "ConfirmedDeliveryDate": {"type": ["null", "string"], "format": "date-time"},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]},
+    "ModifiedDateTime": {"type": ["null", "string"], "format": "date-time"}
+  }
+}

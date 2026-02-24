@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "DataArea": {"type": ["null", "string"]},
+    "Name": {"type": ["null", "string"]},
+    "LegalEntityId": {"type": ["null", "string"]},
+    "PartyNumber": {"type": ["null", "string"]},
+    "AddressCountryRegionId": {"type": ["null", "string"]},
+    "AddressCity": {"type": ["null", "string"]},
+    "AddressStreet": {"type": ["null", "string"]},
+    "AddressZipCode": {"type": ["null", "string"]},
+    "AddressState": {"type": ["null", "string"]},
+    "CurrencyCode": {"type": ["null", "string"]},
+    "FiscalCalendarId": {"type": ["null", "string"]},
+    "ChartOfAccountsId": {"type": ["null", "string"]},
+    "IsFrenchPublicSector": {"type": ["null", "boolean"]}
+  }
+}

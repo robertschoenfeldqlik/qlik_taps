@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "JournalNumber": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "JournalEntryId": {"type": ["null", "string"]},
+    "PostingDate": {"type": ["null", "string"], "format": "date-time"},
+    "DocumentDate": {"type": ["null", "string"], "format": "date-time"},
+    "DocumentNumber": {"type": ["null", "string"]},
+    "FiscalCalendarYear": {"type": ["null", "string"]},
+    "FiscalCalendarPeriod": {"type": ["null", "string"]},
+    "LedgerName": {"type": ["null", "string"]},
+    "CreatedDateTime": {"type": ["null", "string"], "format": "date-time"},
+    "PostingType": {"type": ["null", "string"]},
+    "SubledgerVoucher": {"type": ["null", "string"]}
+  }
+}

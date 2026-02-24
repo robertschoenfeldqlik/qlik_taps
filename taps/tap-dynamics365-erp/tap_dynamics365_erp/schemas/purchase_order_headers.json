@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "PurchaseOrderNumber": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "PurchaseOrderStatus": {"type": ["null", "string"]},
+    "PurchaseOrderName": {"type": ["null", "string"]},
+    "OrderVendorAccountNumber": {"type": ["null", "string"]},
+    "InvoiceVendorAccountNumber": {"type": ["null", "string"]},
+    "CurrencyCode": {"type": ["null", "string"]},
+    "TotalDiscountAmount": {"type": ["null", "number"]},
+    "TotalChargeAmount": {"type": ["null", "number"]},
+    "TotalTaxAmount": {"type": ["null", "number"]},
+    "OrderCreatedDateTime": {"type": ["null", "string"], "format": "date-time"},
+    "RequestedDeliveryDate": {"type": ["null", "string"], "format": "date-time"},
+    "ConfirmedDeliveryDate": {"type": ["null", "string"], "format": "date-time"},
+    "DeliveryTermsCode": {"type": ["null", "string"]},
+    "DeliveryModeCode": {"type": ["null", "string"]},
+    "PaymentTermsName": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]},
+    "DeliveryAddressCity": {"type": ["null", "string"]},
+    "DeliveryAddressState": {"type": ["null", "string"]},
+    "DeliveryAddressCountryRegionId": {"type": ["null", "string"]},
+    "ModifiedDateTime": {"type": ["null", "string"], "format": "date-time"}
+  }
+}

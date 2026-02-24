@@ -1,0 +1,62 @@
+{
+    "_comment": "=== GENERIC REST API TAP - SAMPLE CONFIG ===",
+    "_comment2": "This config connects to any REST API endpoint.",
+
+    "api_url": "https://api.example.com/v1",
+
+    "_auth_comment": "=== AUTHENTICATION ===",
+    "_auth_options": "no_auth | api_key | bearer_token | basic | oauth2",
+    "auth_method": "bearer_token",
+    "bearer_token": "your-token-here",
+
+    "_global_comment": "=== GLOBAL SETTINGS ===",
+    "user_agent": "tap-rest-api/1.0",
+    "request_timeout": 300,
+    "start_date": "2024-01-01T00:00:00Z",
+
+    "headers": {
+        "Accept": "application/json"
+    },
+
+    "params": {
+        "format": "json"
+    },
+
+    "streams": [
+        {
+            "name": "users",
+            "path": "/users",
+            "primary_keys": ["id"],
+            "replication_key": "updated_at",
+            "replication_method": "INCREMENTAL",
+            "records_path": "$.data",
+            "pagination_style": "page",
+            "pagination_page_size": 100,
+            "params": {
+                "status": "active"
+            }
+        },
+        {
+            "name": "orders",
+            "path": "/orders",
+            "primary_keys": ["order_id"],
+            "replication_key": "modified_date",
+            "replication_method": "INCREMENTAL",
+            "records_path": "$.results",
+            "pagination_style": "cursor",
+            "pagination_cursor_path": "$.meta.next_cursor",
+            "pagination_cursor_param": "cursor",
+            "bookmark_param": "updated_since",
+            "denest": true
+        },
+        {
+            "name": "products",
+            "path": "/products",
+            "primary_keys": ["sku"],
+            "replication_method": "FULL_TABLE",
+            "records_path": "$.items",
+            "pagination_style": "offset",
+            "pagination_page_size": 50
+        }
+    ]
+}

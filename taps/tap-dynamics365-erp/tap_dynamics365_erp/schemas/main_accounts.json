@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "MainAccountId": {"type": ["null", "string"]},
+    "ChartOfAccounts": {"type": ["null", "string"]},
+    "Name": {"type": ["null", "string"]},
+    "MainAccountCategory": {"type": ["null", "string"]},
+    "DebitCreditDefault": {"type": ["null", "string"]},
+    "Type": {"type": ["null", "string"]},
+    "CurrencyCode": {"type": ["null", "string"]},
+    "IsBalanceSheetAccount": {"type": ["null", "string"]},
+    "ClosingAccountId": {"type": ["null", "string"]},
+    "IsSuspended": {"type": ["null", "boolean"]},
+    "DoNotAllowManualEntry": {"type": ["null", "boolean"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]}
+  }
+}

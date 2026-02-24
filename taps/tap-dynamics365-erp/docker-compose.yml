@@ -1,0 +1,109 @@
+###############################################################################
+# docker-compose.yml - Singer tap-dynamics365-erp
+#
+# Setup:
+#   1. cp .env.example .env  &&  edit .env with your D365 credentials
+#   2. cp config.sample.json config/config.json  &&  fill in values
+#   3. docker compose run --rm discover > config/catalog.json
+#   4. Edit catalog.json: set "selected": true on streams you want
+#   5. docker compose run --rm sync-csv        # or sync-jsonl, scheduled, etc.
+###############################################################################
+
+x-common: &common
+  build: .
+  env_file:
+    - .env
+  volumes:
+    - ./config:/app/config
+    - ./output:/app/output
+    - ./state:/app/state
+    - ./logs:/app/logs
+  restart: "no"
+
+services:
+  # -------------------------------------------------------------------------
+  # Discover: output the catalog (available streams + schemas) to stdout
+  # -------------------------------------------------------------------------
+  discover:
+    <<: *common
+    command:
+      - --config
+      - /app/config/config.json
+      - --discover
+
+  # -------------------------------------------------------------------------
+  # Sync to CSV files
+  # -------------------------------------------------------------------------
+  sync-csv:
+    <<: *common
+    entrypoint: ["/app/run.sh"]
+    command:
+      - --tap-config
+      - /app/config/config.json
+      - --catalog
+      - /app/config/catalog.json
+      - --state
+      - /app/state/state.json
+      - --target
+      - target-csv
+      - --target-config
+      - /app/config/target_csv_config.json
+
+  # -------------------------------------------------------------------------
+  # Sync to JSONL files
+  # -------------------------------------------------------------------------
+  sync-jsonl:
+    <<: *common
+    entrypoint: ["/app/run.sh"]
+    command:
+      - --tap-config
+      - /app/config/config.json
+      - --catalog
+      - /app/config/catalog.json
+      - --state
+      - /app/state/state.json
+      - --target
+      - target-jsonl
+      - --target-config
+      - /app/config/target_jsonl_config.json
+
+  # -------------------------------------------------------------------------
+  # Raw sync: tap output to stdout (pipe to external targets or debug)
+  # -------------------------------------------------------------------------
+  sync-raw:
+    <<: *common
+    command:
+      - --config
+      - /app/config/config.json
+      - --catalog
+      - /app/config/catalog.json
+      - --state
+      - /app/state/state.json
+
+  # -------------------------------------------------------------------------
+  # Scheduled sync: runs on a loop (default every hour)
+  # Set SYNC_INTERVAL_SECONDS in .env to change
+  # -------------------------------------------------------------------------
+  scheduled:
+    <<: *common
+    entrypoint: ["/app/schedule.sh"]
+    command: []
+    environment:
+      - SYNC_INTERVAL_SECONDS=${SYNC_INTERVAL_SECONDS:-3600}
+      - TAP_CONFIG=/app/config/config.json
+      - CATALOG=/app/config/catalog.json
+      - STATE=/app/state/state.json
+      - TARGET=${SYNC_TARGET:-target-csv}
+      - TARGET_CONFIG=/app/config/${SYNC_TARGET_CONFIG:-target_csv_config.json}
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Validate: run singer-check-tap on the tap output
+  # -------------------------------------------------------------------------
+  validate:
+    <<: *common
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        tap-dynamics365-erp --config /app/config/config.json --catalog /app/config/catalog.json \
+          | singer-check-tap

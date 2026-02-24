@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "ItemNumber": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "ProductNumber": {"type": ["null", "string"]},
+    "ProductName": {"type": ["null", "string"]},
+    "SearchName": {"type": ["null", "string"]},
+    "ProductType": {"type": ["null", "string"]},
+    "ProductSubType": {"type": ["null", "string"]},
+    "ItemModelGroupId": {"type": ["null", "string"]},
+    "ItemGroupId": {"type": ["null", "string"]},
+    "StorageDimensionGroupName": {"type": ["null", "string"]},
+    "TrackingDimensionGroupName": {"type": ["null", "string"]},
+    "InventoryUnitSymbol": {"type": ["null", "string"]},
+    "SalesUnitSymbol": {"type": ["null", "string"]},
+    "PurchaseUnitSymbol": {"type": ["null", "string"]},
+    "SalesPrice": {"type": ["null", "number"]},
+    "PurchasePrice": {"type": ["null", "number"]},
+    "CostPrice": {"type": ["null", "number"]},
+    "SalesTaxItemGroupId": {"type": ["null", "string"]},
+    "PurchaseTaxItemGroupId": {"type": ["null", "string"]},
+    "DefaultOrderType": {"type": ["null", "string"]},
+    "IsSalesWithdrawnFromMarket": {"type": ["null", "string"]},
+    "IsPurchaseStopped": {"type": ["null", "string"]},
+    "IsStockedProduct": {"type": ["null", "boolean"]}
+  }
+}

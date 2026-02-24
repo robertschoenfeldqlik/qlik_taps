@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "WarehouseId": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "WarehouseName": {"type": ["null", "string"]},
+    "InventorySiteId": {"type": ["null", "string"]},
+    "OperationalSiteName": {"type": ["null", "string"]},
+    "AddressCity": {"type": ["null", "string"]},
+    "AddressState": {"type": ["null", "string"]},
+    "AddressZipCode": {"type": ["null", "string"]},
+    "AddressCountryRegionId": {"type": ["null", "string"]},
+    "AddressStreet": {"type": ["null", "string"]},
+    "IsWMSEnabled": {"type": ["null", "string"]},
+    "IsPrimaryAddressAssigned": {"type": ["null", "string"]}
+  }
+}

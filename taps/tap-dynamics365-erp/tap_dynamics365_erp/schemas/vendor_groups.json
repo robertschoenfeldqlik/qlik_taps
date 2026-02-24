@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "VendorGroupId": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "Description": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]},
+    "PaymentTermId": {"type": ["null", "string"]},
+    "TaxGroupId": {"type": ["null", "string"]},
+    "ClearingPeriodPaymentTermName": {"type": ["null", "string"]}
+  }
+}

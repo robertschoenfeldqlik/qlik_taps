@@ -1,0 +1,35 @@
+{
+    "_comment": "Example: No authentication (public API - JSONPlaceholder)",
+
+    "api_url": "https://jsonplaceholder.typicode.com",
+    "auth_method": "no_auth",
+
+    "streams": [
+        {
+            "name": "posts",
+            "path": "/posts",
+            "primary_keys": ["id"],
+            "replication_method": "FULL_TABLE",
+            "pagination_style": "none",
+            "denest": true
+        },
+        {
+            "name": "users",
+            "path": "/users",
+            "primary_keys": ["id"],
+            "replication_method": "FULL_TABLE",
+            "pagination_style": "none",
+            "denest": true
+        },
+        {
+            "name": "comments",
+            "path": "/comments",
+            "primary_keys": ["id"],
+            "replication_method": "FULL_TABLE",
+            "pagination_style": "none",
+            "params": {
+                "postId": "1"
+            }
+        }
+    ]
+}

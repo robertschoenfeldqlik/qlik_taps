@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "HeaderReference": {"type": ["null", "string"]},
+    "InvoiceLineNumber": {"type": ["null", "number"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "ItemNumber": {"type": ["null", "string"]},
+    "ProductName": {"type": ["null", "string"]},
+    "ReceiveQuantity": {"type": ["null", "number"]},
+    "PurchaseUnitSymbol": {"type": ["null", "string"]},
+    "PurchasePrice": {"type": ["null", "number"]},
+    "LineAmount": {"type": ["null", "number"]},
+    "PurchaseOrderNumber": {"type": ["null", "string"]},
+    "PurchaseOrderLineNumber": {"type": ["null", "number"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]}
+  }
+}

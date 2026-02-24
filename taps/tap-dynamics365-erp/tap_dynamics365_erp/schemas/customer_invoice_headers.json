@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "InvoiceId": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "InvoiceDate": {"type": ["null", "string"], "format": "date-time"},
+    "InvoiceCustomerAccountNumber": {"type": ["null", "string"]},
+    "SalesOrderNumber": {"type": ["null", "string"]},
+    "CurrencyCode": {"type": ["null", "string"]},
+    "InvoiceAmount": {"type": ["null", "number"]},
+    "TotalTaxAmount": {"type": ["null", "number"]},
+    "TotalDiscountAmount": {"type": ["null", "number"]},
+    "TotalChargeAmount": {"type": ["null", "number"]},
+    "DueDate": {"type": ["null", "string"], "format": "date-time"},
+    "PaymentTermsName": {"type": ["null", "string"]},
+    "DeliveryTermsCode": {"type": ["null", "string"]},
+    "DeliveryModeCode": {"type": ["null", "string"]},
+    "InvoiceAddressCity": {"type": ["null", "string"]},
+    "InvoiceAddressState": {"type": ["null", "string"]},
+    "InvoiceAddressZipCode": {"type": ["null", "string"]},
+    "InvoiceAddressCountryRegionId": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "JournalBatchNumber": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "JournalName": {"type": ["null", "string"]},
+    "Description": {"type": ["null", "string"]},
+    "JournalType": {"type": ["null", "string"]},
+    "PostedDateTime": {"type": ["null", "string"], "format": "date-time"},
+    "IsPosted": {"type": ["null", "string"]},
+    "CurrentVoucherNumber": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]}
+  }
+}

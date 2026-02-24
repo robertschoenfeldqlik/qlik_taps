@@ -1,0 +1,133 @@
+###############################################################################
+# docker-compose.yml - Singer REST API Tap + Config Builder UI
+#
+# Services:
+#   app - Combined container (UI + Tap) — recommended for local Docker Desktop
+#   ui  - Standalone UI (no tap runner)
+#   tap - Standalone tap CLI (runs on demand)
+#
+# Quick start:
+#   docker compose build app
+#   docker compose up -d app
+#   # Open http://localhost:9090
+#
+# Standalone usage (separate containers):
+#   docker compose build ui tap
+#   docker compose up -d ui
+#   docker compose run --rm --profile cli tap --config /app/config/config.json --discover
+#
+# Stop:
+#   docker compose down
+###############################################################################
+
+services:
+  # --------------------------------------------------------------------------
+  # App: Combined container — UI + Python tap in one image (recommended)
+  # --------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: singer-tap-builder
+    ports:
+      - "9090:9090"
+    volumes:
+      - app-data:/app/server/data
+      - app-config:/app/config
+      - app-output:/app/output
+      - app-state:/app/state
+      - app-logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - PORT=9090
+      - PYTHONUNBUFFERED=1
+      - ALLOWED_ORIGINS=http://localhost:9090
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=100M
+    mem_limit: 2g
+    cpus: 2
+    pids_limit: 100
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # UI: Standalone web UI (no tap runner — config builder only)
+  # --------------------------------------------------------------------------
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: tap-config-builder
+    ports:
+      - "3001:3001"
+    volumes:
+      - ui-data:/app/server/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    profiles:
+      - standalone
+
+  # --------------------------------------------------------------------------
+  # Tap: Standalone Singer tap CLI (runs on demand)
+  # --------------------------------------------------------------------------
+  tap:
+    build:
+      context: ./taps/tap-rest-api-generic
+      dockerfile: Dockerfile
+    container_name: tap-rest-api
+    volumes:
+      - tap-config:/app/config
+      - tap-output:/app/output
+      - tap-state:/app/state
+      - tap-logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+    profiles:
+      - cli
+
+# ---------------------------------------------------------------------------
+# Named volumes for data persistence
+# ---------------------------------------------------------------------------
+volumes:
+  # Combined app volumes
+  app-data:
+    driver: local
+  app-config:
+    driver: local
+  app-output:
+    driver: local
+  app-state:
+    driver: local
+  app-logs:
+    driver: local
+
+  # Standalone UI volume
+  ui-data:
+    driver: local
+
+  # Standalone tap volumes
+  tap-config:
+    driver: local
+  tap-output:
+    driver: local
+  tap-state:
+    driver: local
+  tap-logs:
+    driver: local

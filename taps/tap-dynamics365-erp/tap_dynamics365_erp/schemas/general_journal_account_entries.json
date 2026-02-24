@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "GeneralJournalAccountEntryRecId": {"type": ["null", "integer"]},
+    "JournalNumber": {"type": ["null", "string"]},
+    "MainAccountId": {"type": ["null", "string"]},
+    "MainAccountName": {"type": ["null", "string"]},
+    "AccountingCurrencyAmount": {"type": ["null", "number"]},
+    "ReportingCurrencyAmount": {"type": ["null", "number"]},
+    "TransactionCurrencyAmount": {"type": ["null", "number"]},
+    "TransactionCurrencyCode": {"type": ["null", "string"]},
+    "IsCredit": {"type": ["null", "boolean"]},
+    "PostingDate": {"type": ["null", "string"], "format": "date-time"},
+    "DocumentDate": {"type": ["null", "string"], "format": "date-time"},
+    "DocumentNumber": {"type": ["null", "string"]},
+    "Description": {"type": ["null", "string"]},
+    "PostingType": {"type": ["null", "string"]},
+    "LedgerDimensionDisplayValue": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]}
+  }
+}

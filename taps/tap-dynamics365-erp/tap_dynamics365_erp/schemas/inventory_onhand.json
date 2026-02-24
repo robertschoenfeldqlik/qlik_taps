@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "ItemNumber": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "InventorySiteId": {"type": ["null", "string"]},
+    "WarehouseId": {"type": ["null", "string"]},
+    "ProductName": {"type": ["null", "string"]},
+    "AvailableOnHandQuantity": {"type": ["null", "number"]},
+    "OnHandQuantity": {"type": ["null", "number"]},
+    "OnOrderQuantity": {"type": ["null", "number"]},
+    "OrderedQuantity": {"type": ["null", "number"]},
+    "ReservedOnHandQuantity": {"type": ["null", "number"]},
+    "ReservedOrderedQuantity": {"type": ["null", "number"]},
+    "TotalAvailableQuantity": {"type": ["null", "number"]},
+    "UnitOfMeasure": {"type": ["null", "string"]}
+  }
+}

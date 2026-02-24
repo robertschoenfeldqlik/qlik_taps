@@ -1,0 +1,42 @@
+{
+    "_comment": "Example: HTTP Basic Authentication (Jira API)",
+
+    "api_url": "https://your-domain.atlassian.net/rest/api/3",
+    "auth_method": "basic",
+    "username": "your-email@company.com",
+    "password": "your-api-token",
+
+    "user_agent": "tap-rest-api-jira",
+    "start_date": "2024-01-01T00:00:00Z",
+
+    "headers": {
+        "Accept": "application/json"
+    },
+
+    "streams": [
+        {
+            "name": "issues",
+            "path": "/search",
+            "primary_keys": ["id"],
+            "replication_key": "fields.updated",
+            "replication_method": "INCREMENTAL",
+            "records_path": "$.issues",
+            "pagination_style": "offset",
+            "pagination_offset_param": "startAt",
+            "pagination_limit_param": "maxResults",
+            "pagination_page_size": 50,
+            "params": {
+                "jql": "project = MYPROJ ORDER BY updated DESC"
+            },
+            "denest": true
+        },
+        {
+            "name": "projects",
+            "path": "/project",
+            "primary_keys": ["id"],
+            "replication_method": "FULL_TABLE",
+            "pagination_style": "none",
+            "denest": true
+        }
+    ]
+}

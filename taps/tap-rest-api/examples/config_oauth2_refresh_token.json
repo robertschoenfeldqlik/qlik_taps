@@ -1,0 +1,26 @@
+{
+    "_comment": "Example: OAuth 2.0 Refresh Token flow (Google APIs, Shopify, etc.)",
+
+    "api_url": "https://www.googleapis.com/analytics/v3",
+    "auth_method": "oauth2",
+    "oauth2_token_url": "https://oauth2.googleapis.com/token",
+    "oauth2_client_id": "your-client-id.apps.googleusercontent.com",
+    "oauth2_client_secret": "your-client-secret",
+    "oauth2_grant_type": "refresh_token",
+    "oauth2_refresh_token": "your-refresh-token",
+
+    "user_agent": "tap-rest-api-google",
+    "start_date": "2024-01-01T00:00:00Z",
+
+    "streams": [
+        {
+            "name": "accounts",
+            "path": "/management/accounts",
+            "primary_keys": ["id"],
+            "replication_method": "FULL_TABLE",
+            "records_path": "$.items",
+            "pagination_style": "none",
+            "denest": true
+        }
+    ]
+}

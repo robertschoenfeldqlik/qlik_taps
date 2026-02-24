@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "HeaderReference": {"type": ["null", "string"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "InvoiceNumber": {"type": ["null", "string"]},
+    "InvoiceDate": {"type": ["null", "string"], "format": "date-time"},
+    "VendorAccountNumber": {"type": ["null", "string"]},
+    "VendorName": {"type": ["null", "string"]},
+    "PurchaseOrderNumber": {"type": ["null", "string"]},
+    "CurrencyCode": {"type": ["null", "string"]},
+    "InvoiceTotalAmount": {"type": ["null", "number"]},
+    "TotalTaxAmount": {"type": ["null", "number"]},
+    "TotalChargeAmount": {"type": ["null", "number"]},
+    "DueDate": {"type": ["null", "string"], "format": "date-time"},
+    "PaymentTermsName": {"type": ["null", "string"]},
+    "ApprovalStatus": {"type": ["null", "string"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]},
+    "ModifiedDateTime": {"type": ["null", "string"], "format": "date-time"}
+  }
+}

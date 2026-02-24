@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "InvoiceId": {"type": ["null", "string"]},
+    "InvoiceLineNumber": {"type": ["null", "number"]},
+    "dataAreaId": {"type": ["null", "string"]},
+    "ItemNumber": {"type": ["null", "string"]},
+    "ProductName": {"type": ["null", "string"]},
+    "InvoicedQuantity": {"type": ["null", "number"]},
+    "SalesUnitSymbol": {"type": ["null", "string"]},
+    "SalesPrice": {"type": ["null", "number"]},
+    "LineAmount": {"type": ["null", "number"]},
+    "LineDiscountAmount": {"type": ["null", "number"]},
+    "SalesTaxAmount": {"type": ["null", "number"]},
+    "SalesOrderNumber": {"type": ["null", "string"]},
+    "SalesOrderLineNumber": {"type": ["null", "number"]},
+    "DefaultDimensionDisplayValue": {"type": ["null", "string"]}
+  }
+}

@@ -1,0 +1,47 @@
+{
+    "_comment": "Example: Bearer Token authentication (GitHub API)",
+
+    "api_url": "https://api.github.com",
+    "auth_method": "bearer_token",
+    "bearer_token": "ghp_xxxxxxxxxxxxxxxxxxxx",
+
+    "user_agent": "tap-rest-api-github",
+    "start_date": "2024-01-01T00:00:00Z",
+
+    "headers": {
+        "Accept": "application/vnd.github.v3+json"
+    },
+
+    "streams": [
+        {
+            "name": "repos",
+            "path": "/user/repos",
+            "primary_keys": ["id"],
+            "replication_key": "updated_at",
+            "replication_method": "INCREMENTAL",
+            "pagination_style": "link_header",
+            "pagination_page_size": 100,
+            "params": {
+                "sort": "updated",
+                "direction": "desc",
+                "per_page": "100"
+            },
+            "denest": true
+        },
+        {
+            "name": "issues",
+            "path": "/repos/owner/repo/issues",
+            "primary_keys": ["id"],
+            "replication_key": "updated_at",
+            "replication_method": "INCREMENTAL",
+            "pagination_style": "link_header",
+            "params": {
+                "state": "all",
+                "sort": "updated",
+                "per_page": "100"
+            },
+            "bookmark_param": "since",
+            "denest": true
+        }
+    ]
+}

@@ -112,6 +112,36 @@ async function writeTempConfig(runId, configJson) {
   return configPath;
 }
 
+/**
+ * Auto-select all streams in a Singer catalog.
+ * Sets metadata `selected: true` at the top-level breadcrumb for each stream
+ * so the tap knows which streams to sync.
+ */
+function autoSelectAllStreams(catalog) {
+  if (!catalog || !Array.isArray(catalog.streams)) return catalog;
+
+  for (const stream of catalog.streams) {
+    if (!Array.isArray(stream.metadata)) {
+      // If no metadata array, create one with selected=true
+      stream.metadata = [{ breadcrumb: [], metadata: { selected: true } }];
+      continue;
+    }
+
+    // Find the top-level metadata entry (empty breadcrumb)
+    let topLevel = stream.metadata.find(
+      m => Array.isArray(m.breadcrumb) && m.breadcrumb.length === 0
+    );
+    if (topLevel) {
+      topLevel.metadata = topLevel.metadata || {};
+      topLevel.metadata.selected = true;
+    } else {
+      // Add a top-level entry
+      stream.metadata.unshift({ breadcrumb: [], metadata: { selected: true } });
+    }
+  }
+  return catalog;
+}
+
 /** Write catalog JSON to a temp file and return the path. */
 function writeTempCatalog(runId, catalogJson) {
   fs.mkdirSync(TMP_DIR, { recursive: true, mode: 0o700 });
@@ -360,7 +390,9 @@ router.post('/run', async (req, res) => {
 
     // If a catalog was provided (from a previous discover), use it
     if (req.body.catalog_json) {
-      const catalogPath = writeTempCatalog(runId, req.body.catalog_json);
+      // Auto-select all streams so the tap knows which to sync
+      const selectedCatalog = autoSelectAllStreams(req.body.catalog_json);
+      const catalogPath = writeTempCatalog(runId, selectedCatalog);
       args.push('--catalog', catalogPath);
     }
     // If no catalog provided, the tap will auto-discover then sync

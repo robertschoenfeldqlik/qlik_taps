@@ -15,6 +15,8 @@ export function cleanDynamicsConfig(config) {
   if (config.client_id) clean.client_id = config.client_id;
   if (config.client_secret) clean.client_secret = config.client_secret;
   if (config.user_agent) clean.user_agent = config.user_agent;
+  // Custom OAuth token URL (for mock testing or non-standard Azure AD)
+  if (config.oauth_token_url) clean.oauth_token_url = config.oauth_token_url;
   return clean;
 }
 

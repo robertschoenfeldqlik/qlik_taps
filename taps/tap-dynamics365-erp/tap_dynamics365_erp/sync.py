@@ -181,11 +181,13 @@ def sync(config, state, catalog):
         singer.write_state(state)
 
         # Write schema message
+        # singer.write_schema accepts: stream_name, schema, key_properties, bookmark_properties
+        bookmark_properties = [replication_key] if replication_key else None
         singer.write_schema(
             stream_name,
             schema,
             key_properties=key_properties,
-            replication_key=replication_key,
+            bookmark_properties=bookmark_properties,
         )
 
         with Transformer() as transformer:

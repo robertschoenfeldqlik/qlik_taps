@@ -864,8 +864,8 @@ const CONNECTOR_TEMPLATES = [
   // ─── ERP & Finance ─────────────────────────────────────────────────
   {
     id: 'dynamics365-fo',
-    name: 'Dynamics 365 F&O',
-    description: 'Microsoft Dynamics 365 Finance & Operations — customers, vendors, sales orders, purchase orders, invoices, GL entries, products, and inventory.',
+    name: 'Dynamics 365 F&O OData v4',
+    description: 'Microsoft Dynamics 365 Finance & Operations OData v4 API — OAuth 2.0 client credentials, cross-company queries, customers, vendors, sales orders, purchase orders, invoices, GL entries, products, and inventory.',
     category: 'ERP & Finance',
     logo: '🟦',
     docsUrl: 'https://learn.microsoft.com/en-us/dynamics365/fin-ops-core/dev-itpro/data-entities/odata',
@@ -906,19 +906,19 @@ const CONNECTOR_TEMPLATES = [
   // ─── ERP Mock Testing ────────────────────────────────────────────
   {
     id: 'dynamics365-mock',
-    name: 'D365 F&O Mock (Testing)',
-    description: 'Test Dynamics 365 Finance & Operations tap against the built-in mock OData server — no Azure AD credentials needed.',
+    name: 'D365 F&O OData v4 Mock (Testing)',
+    description: 'Test Dynamics 365 Finance & Operations OData v4 tap against the built-in mock server — $metadata, $filter, cross-company, @odata.nextLink pagination — no Azure AD credentials needed.',
     category: 'ERP & Finance',
     logo: '🧪',
     docsUrl: '',
     tap_binary: 'tap-dynamics365-erp',
     config: {
       tap_type: 'dynamics365',
-      environment_url: 'http://localhost:3001/api/mock',
+      environment_url: 'http://localhost:9090/api/mock',
       tenant_id: 'mock-tenant-id',
       client_id: 'mock-d365-client',
       client_secret: 'mock-d365-secret-12345',
-      oauth_token_url: 'http://localhost:3001/api/mock/oauth2/token',
+      oauth_token_url: 'http://localhost:9090/api/mock/oauth2/token',
       user_agent: 'tap-dynamics365-erp/mock',
       streams: [
         'legal_entities',

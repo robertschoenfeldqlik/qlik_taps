@@ -34,6 +34,9 @@ def discover():
         if valid_replication_keys:
             mdata = metadata.write(mdata, (), "valid-replication-keys", valid_replication_keys)
 
+        # Default to selected (so Run Sync picks up all streams)
+        mdata = metadata.write(mdata, (), "selected", True)
+
         # Field-level metadata
         for field_name in schema.get("properties", {}).keys():
             breadcrumb = ("properties", field_name)

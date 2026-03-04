@@ -1,4 +1,5 @@
 const express = require('express');
+const { getDb } = require('../database/init');
 const router = express.Router();
 
 // ---------------------------------------------------------------------------
@@ -1373,7 +1374,121 @@ router.get('/data/:entitySet', validateD365Auth, setODataHeaders, applyDelay, (r
 });
 
 // ---------------------------------------------------------------------------
-// Routes — REST API Datasets
+// Dynamic Blueprint Helper Functions
+// Must be defined before the route registrations below
+// ---------------------------------------------------------------------------
+
+// Cache for generated blueprint datasets
+const blueprintDatasetCache = new Map();
+
+// ---------------------------------------------------------------------------
+// Routes — Dynamic Mock Datasets from Blueprints
+// IMPORTANT: These must be registered BEFORE the /:dataset catch-all below
+// ---------------------------------------------------------------------------
+
+// GET /api/mock/blueprints — List all active blueprints with their mock URLs
+router.get('/blueprints', async (req, res) => {
+  const blueprints = await getActiveBlueprintEndpoints();
+  const baseUrl = `${req.protocol}://${req.get('host')}/api/mock/blueprint`;
+
+  res.json({
+    active_blueprints: blueprints.map(b => ({
+      id: b.id,
+      name: b.name,
+      source_config: b.source_config_name,
+      api_base_url: b.api_base_url,
+      mock_base_url: `${baseUrl}/${b.id}`,
+      endpoint_count: (b.endpoints?.endpoints || []).length,
+    })),
+  });
+});
+
+// GET /api/mock/blueprint/:blueprintId — List all endpoints for a blueprint
+router.get('/blueprint/:blueprintId', async (req, res) => {
+  const { blueprintId } = req.params;
+  const blueprints = await getActiveBlueprintEndpoints();
+  const blueprint = blueprints.find(b => b.id === blueprintId);
+
+  if (!blueprint) {
+    return res.status(404).json({
+      error: 'Blueprint not found or not active',
+    });
+  }
+
+  const endpoints = blueprint.endpoints?.endpoints || [];
+  const baseUrl = `${req.protocol}://${req.get('host')}/api/mock/blueprint/${blueprintId}`;
+
+  res.json({
+    blueprint_id: blueprint.id,
+    blueprint_name: blueprint.name,
+    source_config: blueprint.source_config_name,
+    api_base_url: blueprint.api_base_url,
+    endpoints: endpoints.map((e, i) => ({
+      index: i,
+      method: e.method,
+      url_pattern: e.url_pattern,
+      mock_url: `${baseUrl}/${i}`,
+      pagination_style: e.pagination_style || 'page',
+      status_code: e.status_code,
+      call_count: e.call_count,
+    })),
+  });
+});
+
+// GET /api/mock/blueprint/:blueprintId/:endpointIndex — Serve generated data
+router.get('/blueprint/:blueprintId/:endpointIndex', applyDelay, async (req, res) => {
+  const { blueprintId, endpointIndex } = req.params;
+  const idx = parseInt(endpointIndex);
+
+  const blueprints = await getActiveBlueprintEndpoints();
+  const blueprint = blueprints.find(b => b.id === blueprintId);
+
+  if (!blueprint) {
+    return res.status(404).json({
+      error: 'Blueprint not found or not active',
+      message: 'Activate the blueprint first via POST /api/blueprints/:id/activate',
+    });
+  }
+
+  const endpoints = blueprint.endpoints?.endpoints || [];
+  if (isNaN(idx) || idx < 0 || idx >= endpoints.length) {
+    return res.status(404).json({
+      error: 'Endpoint not found',
+      message: `Valid endpoint indices: 0-${endpoints.length - 1}`,
+      endpoints: endpoints.map((e, i) => ({ index: i, method: e.method, url_pattern: e.url_pattern })),
+    });
+  }
+
+  const endpoint = endpoints[idx];
+  const cacheKey = `${blueprintId}:${idx}`;
+
+  // Generate or retrieve cached dataset
+  if (!blueprintDatasetCache.has(cacheKey)) {
+    blueprintDatasetCache.set(cacheKey, generateBlueprintDataset(blueprintId, endpoint));
+  }
+
+  const records = blueprintDatasetCache.get(cacheKey);
+
+  // Apply pagination based on the endpoint's detected style
+  const style = endpoint.pagination_style || 'page';
+  const paginator = PAGINATORS[style] || PAGINATORS.page;
+
+  const baseUrl = `${req.protocol}://${req.get('host')}/api/mock/blueprint/${blueprintId}/${idx}`;
+  const result = paginator(records, req, baseUrl);
+
+  for (const [key, val] of Object.entries(result.headers)) {
+    res.set(key, val);
+  }
+
+  if (endpoint.content_type) {
+    res.set('Content-Type', endpoint.content_type);
+  }
+
+  res.json(result.body);
+});
+
+// ---------------------------------------------------------------------------
+// Routes — REST API Datasets (catch-all — must be AFTER specific routes)
 // ---------------------------------------------------------------------------
 
 // GET /api/mock/:dataset — Paginated list endpoint
@@ -1443,5 +1558,157 @@ router.get('/:dataset/:id', validateAuth, applyDelay, (req, res) => {
 
   res.json(record);
 });
+
+// ---------------------------------------------------------------------------
+// Dynamic Mock Datasets from Blueprints
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a value from a schema placeholder using a seeded PRNG.
+ * Supports the placeholder types produced by anonymize.js.
+ */
+function generateFromPlaceholder(rng, placeholder, idx) {
+  if (placeholder === null || placeholder === undefined) return null;
+
+  if (typeof placeholder === 'string') {
+    switch (placeholder) {
+      case '{{string}}':
+        return pick(rng, [...FIRST_NAMES, ...LAST_NAMES, ...COMPANIES]);
+      case '{{long_string}}':
+        return `${pick(rng, COMPANIES)} is a leading provider of ${pick(rng, CATEGORIES)} solutions.`;
+      case '{{integer}}':
+        return Math.floor(rng() * 10000);
+      case '{{float}}':
+        return Math.round(rng() * 10000) / 100;
+      case '{{boolean}}':
+        return rng() > 0.5;
+      case '{{date}}': {
+        const d = new Date(2023, 0, 1);
+        d.setDate(d.getDate() + Math.floor(rng() * 730));
+        return d.toISOString().split('T')[0];
+      }
+      case '{{datetime}}':
+        return randomDate(rng, 2023, 2025);
+      case '{{uuid}}': {
+        const hex = () => Math.floor(rng() * 16).toString(16);
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          return c === 'x' ? hex() : ((Math.floor(rng() * 4) + 8)).toString(16);
+        });
+      }
+      case '{{email}}': {
+        const first = pick(rng, FIRST_NAMES).toLowerCase();
+        const last = pick(rng, LAST_NAMES).toLowerCase();
+        const domain = pick(rng, DOMAINS);
+        return `${first}.${last}@${domain}`;
+      }
+      case '{{url}}':
+        return `https://${pick(rng, DOMAINS)}/resource/${Math.floor(rng() * 10000)}`;
+      case '{{phone}}':
+        return `+1${String(Math.floor(rng() * 9000000000) + 1000000000)}`;
+      case '{{ip_address}}':
+        return `${Math.floor(rng() * 255)}.${Math.floor(rng() * 255)}.${Math.floor(rng() * 255)}.${Math.floor(rng() * 255)}`;
+      case '{{numeric_string}}':
+        return String(Math.floor(rng() * 100000));
+      case '{{unknown}}':
+        return `value_${idx}`;
+      default:
+        return placeholder; // return literal value (e.g., for whitelisted header values)
+    }
+  }
+
+  if (Array.isArray(placeholder)) {
+    if (placeholder.length === 0) return [];
+    const count = Math.floor(rng() * 8) + 2; // 2-9 items
+    return Array.from({ length: count }, (_, i) =>
+      generateFromSchema(rng, placeholder[0], i)
+    );
+  }
+
+  if (typeof placeholder === 'object') {
+    return generateFromSchema(rng, placeholder, idx);
+  }
+
+  return placeholder;
+}
+
+/**
+ * Generate a full object from a schema template.
+ */
+function generateFromSchema(rng, schema, idx) {
+  if (schema === null || schema === undefined) return null;
+  if (typeof schema !== 'object') return generateFromPlaceholder(rng, schema, idx);
+  if (Array.isArray(schema)) return generateFromPlaceholder(rng, schema, idx);
+
+  const result = {};
+  for (const [key, val] of Object.entries(schema)) {
+    result[key] = generateFromPlaceholder(rng, val, idx);
+  }
+  return result;
+}
+
+/**
+ * Generate a dataset of records from a blueprint endpoint's response schema.
+ */
+function generateBlueprintDataset(blueprintId, endpoint, totalRecords = 150) {
+  const seed = hashString(`blueprint:${blueprintId}:${endpoint.url_pattern}`);
+  const rng = createSeededRNG(seed);
+  const records = [];
+
+  const schema = endpoint.response_schema;
+  if (!schema || typeof schema !== 'object') return records;
+
+  // Detect if the response is a wrapper with an array inside
+  // Common patterns: { data: [...] }, { results: [...] }, { value: [...] }, { items: [...] }
+  let itemSchema = null;
+  const arrayFields = ['data', 'results', 'value', 'items', 'records', 'entries', 'rows'];
+  for (const field of arrayFields) {
+    if (schema[field] && Array.isArray(schema[field]) && schema[field].length > 0) {
+      itemSchema = schema[field][0];
+      break;
+    }
+  }
+
+  // If no recognized array wrapper, treat the schema itself as the item schema
+  if (!itemSchema) {
+    // If the schema is itself an array
+    if (Array.isArray(schema) && schema.length > 0) {
+      itemSchema = schema[0];
+    } else {
+      itemSchema = schema;
+    }
+  }
+
+  for (let i = 0; i < totalRecords; i++) {
+    const record = generateFromSchema(rng, itemSchema, i + 1);
+    if (record && typeof record === 'object' && !Array.isArray(record)) {
+      // Add an id if the schema doesn't have one
+      if (!('id' in record)) record.id = i + 1;
+    }
+    records.push(record);
+  }
+
+  return records;
+}
+
+/**
+ * Load all active blueprints and serve their endpoints dynamically.
+ */
+async function getActiveBlueprintEndpoints() {
+  try {
+    const db = await getDb();
+    const results = db.exec('SELECT * FROM mock_blueprints WHERE active = 1');
+    if (!results.length) return [];
+
+    const cols = results[0].columns;
+    return results[0].values.map(row => {
+      const obj = {};
+      cols.forEach((col, i) => { obj[col] = row[i]; });
+      try { obj.endpoints = JSON.parse(obj.endpoints); } catch { obj.endpoints = {}; }
+      return obj;
+    });
+  } catch {
+    return [];
+  }
+}
 
 module.exports = router;

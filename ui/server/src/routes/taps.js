@@ -170,7 +170,7 @@ function cleanupTempFiles(runId) {
 const ALLOWED_RUN_COLUMNS = new Set([
   'status', 'completed_at', 'records_synced', 'streams_discovered',
   'catalog_json', 'output_log', 'error_message', 'state_json', 'sample_records',
-  'target_type', 'target_config',
+  'target_type', 'target_config', 'http_metadata',
 ]);
 
 /** Update a tap_run row in the database. */
@@ -453,6 +453,7 @@ router.post('/run', async (req, res) => {
       streamCount: 0,
       lastState: '',
       sampleRecords: {},
+      httpMetadata: [],
     };
     activeRuns.set(runId, runState);
 
@@ -517,6 +518,18 @@ router.post('/run', async (req, res) => {
 
       for (const line of lines) {
         if (!line.trim()) continue;
+
+        // Capture HTTP metadata lines emitted by the Python tap
+        if (line.startsWith('HTTP_META:')) {
+          try {
+            const meta = JSON.parse(line.slice(10));
+            runState.httpMetadata.push(meta);
+            // Broadcast to SSE clients for live HTTP trace view
+            broadcastToClients(runId, { type: 'http_meta', meta });
+          } catch (e) { /* skip malformed HTTP_META lines */ }
+          continue; // don't log HTTP_META lines as regular stderr
+        }
+
         runState.logBuffer.push(`[stderr] ${line}`);
         if (runState.logBuffer.length > MAX_LOG_LINES) {
           runState.logBuffer = runState.logBuffer.slice(-MAX_LOG_LINES);
@@ -555,6 +568,7 @@ router.post('/run', async (req, res) => {
         output_log: runState.logBuffer.join('\n'),
         state_json: runState.lastState,
         sample_records: JSON.stringify(runState.sampleRecords),
+        http_metadata: JSON.stringify(runState.httpMetadata || []),
       });
 
       broadcastToClients(runId, { type: 'error', message: errorMsg });
@@ -609,6 +623,7 @@ router.post('/run', async (req, res) => {
         error_message: errorMessage,
         state_json: runState.lastState,
         sample_records: JSON.stringify(runState.sampleRecords),
+        http_metadata: JSON.stringify(runState.httpMetadata || []),
       });
 
       broadcastToClients(runId, {
@@ -800,6 +815,12 @@ router.get('/runs/:id', async (req, res) => {
       try { sampleRecords = JSON.parse(row.sample_records); } catch (e) { sampleRecords = null; }
     }
 
+    // Parse http_metadata if present
+    let httpMetadata = null;
+    if (row.http_metadata) {
+      try { httpMetadata = JSON.parse(row.http_metadata); } catch (e) { httpMetadata = null; }
+    }
+
     res.json({
       id: row.id,
       config_id: row.config_id,
@@ -817,6 +838,7 @@ router.get('/runs/:id', async (req, res) => {
       sample_records: sampleRecords,
       target_type: row.target_type || '',
       target_config: row.target_config || '',
+      http_metadata: httpMetadata,
     });
   } catch (err) {
     console.error('Error getting run:', err);
@@ -856,6 +878,7 @@ router.post('/runs/:id/stop', async (req, res) => {
     output_log: (run.logBuffer || []).join('\n'),
     state_json: run.lastState || '',
     sample_records: JSON.stringify(run.sampleRecords || {}),
+    http_metadata: JSON.stringify(run.httpMetadata || []),
   });
 
   broadcastToClients(runId, { type: 'complete', status: 'stopped' });

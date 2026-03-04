@@ -6,9 +6,12 @@ Handles:
   - Retry with exponential backoff (429, 5xx, connection errors)
   - Configurable request timeout
   - Raw and paginated request methods
+  - HTTP metadata emission for capture by the Node server
 """
 
+import json
 import math
+import sys
 import time
 from email.utils import parsedate_to_datetime
 
@@ -79,6 +82,42 @@ def _log_backoff(details):
     )
 
 
+def _emit_http_meta(response, *args, **kwargs):
+    """Emit HTTP metadata to stderr for capture by the Node server.
+
+    Emits a structured JSON line prefixed with HTTP_META: so the Node
+    process manager can parse it separately from regular log output.
+    Auth headers and payload values are captured here but will be
+    anonymized server-side before storage.
+    """
+    try:
+        # Build body preview — cap at 2000 chars to keep output manageable
+        body_preview = ""
+        content_type = response.headers.get("Content-Type", "")
+        if "json" in content_type and response.text:
+            body_preview = response.text[:2000]
+
+        meta = {
+            "timestamp": time.time(),
+            "elapsed_ms": round(response.elapsed.total_seconds() * 1000, 1),
+            "request": {
+                "method": response.request.method,
+                "url": response.request.url,
+                "headers": dict(response.request.headers),
+            },
+            "response": {
+                "status_code": response.status_code,
+                "headers": dict(response.headers),
+                "content_type": content_type,
+                "body_size": len(response.content),
+                "body_preview": body_preview,
+            },
+        }
+        print(f"HTTP_META:{json.dumps(meta)}", file=sys.stderr, flush=True)
+    except Exception:
+        pass  # Never let metadata emission break the actual request flow
+
+
 class RestClient:
     """Generic REST API client with auth, retries, and pagination support."""
 
@@ -102,6 +141,9 @@ class RestClient:
         })
         if self.global_headers:
             self._session.headers.update(self.global_headers)
+
+        # Install HTTP metadata hook for request/response capture
+        self._session.hooks["response"].append(_emit_http_meta)
 
         # Build auth handler
         self.auth = build_auth(config)

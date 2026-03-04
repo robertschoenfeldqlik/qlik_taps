@@ -65,4 +65,12 @@ export const importPackage = (file) => {
   });
 };
 
+// ---- Blueprints (API Metadata → Mock Datasets) ----
+export const getBlueprints = () => api.get('/blueprints');
+export const getBlueprint = (id) => api.get(`/blueprints/${id}`);
+export const createBlueprint = (data) => api.post('/blueprints', data);
+export const deleteBlueprint = (id) => api.delete(`/blueprints/${id}`);
+export const activateBlueprint = (id) => api.post(`/blueprints/${id}/activate`);
+export const deactivateBlueprint = (id) => api.post(`/blueprints/${id}/deactivate`);
+
 export default api;

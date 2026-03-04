@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Database, Settings, Play, Plug, Package } from 'lucide-react';
+import { Database, Settings, Play, Plug, Package, Fingerprint } from 'lucide-react';
 
 const navLinks = [
   { to: '/', icon: Plug, label: 'Connectors' },
   { to: '/taps', icon: Play, label: 'Run Taps' },
+  { to: '/blueprints', icon: Fingerprint, label: 'Blueprints' },
   { to: '/deploy', icon: Package, label: 'Deploy' },
 ];
 

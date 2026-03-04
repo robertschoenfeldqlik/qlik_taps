@@ -68,6 +68,26 @@ async function getDb() {
     db.run(`ALTER TABLE tap_runs ADD COLUMN target_config TEXT DEFAULT ''`);
   } catch (e) { /* column already exists */ }
 
+  try {
+    db.run(`ALTER TABLE tap_runs ADD COLUMN http_metadata TEXT DEFAULT ''`);
+  } catch (e) { /* column already exists */ }
+
+  // Mock blueprints — captured HTTP metadata anonymized into reusable mock templates
+  db.run(`
+    CREATE TABLE IF NOT EXISTS mock_blueprints (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      source_run_id TEXT,
+      source_config_name TEXT DEFAULT '',
+      api_base_url TEXT DEFAULT '',
+      auth_method TEXT DEFAULT 'no_auth',
+      endpoints TEXT NOT NULL,
+      active INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Encrypt any existing plaintext credentials
   migrateEncryptConfigs();
 

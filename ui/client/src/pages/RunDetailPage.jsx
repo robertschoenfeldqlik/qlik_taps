@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getTapRun, stopTapRun, getRunStreamUrl } from '../api/client';
 import Toast from '../components/shared/Toast';
+import HttpTracePanel from '../components/taps/HttpTracePanel';
 
 function StatusBadge({ status }) {
   const styles = {
@@ -224,6 +225,13 @@ export default function RunDetailPage() {
           const data = JSON.parse(event.data);
           if (data.type === 'log') {
             setLogLines(prev => [...prev, data.line]);
+          } else if (data.type === 'http_meta') {
+            // Live HTTP metadata from tap process
+            setRun(prev => {
+              if (!prev) return prev;
+              const existing = Array.isArray(prev.http_metadata) ? prev.http_metadata : [];
+              return { ...prev, http_metadata: [...existing, data.meta] };
+            });
           } else if (data.type === 'status') {
             setRun(prev => prev ? { ...prev, ...data } : prev);
           } else if (data.type === 'complete') {
@@ -346,6 +354,18 @@ export default function RunDetailPage() {
 
       {/* Data sample panel */}
       {run.sample_records && <DataSamplePanel sampleRecords={run.sample_records} />}
+
+      {/* HTTP trace panel — shows captured HTTP request/response metadata */}
+      {run.http_metadata && (
+        <HttpTracePanel
+          httpMetadata={run.http_metadata}
+          runId={run.id}
+          configName={run.config_name}
+          onBlueprintCreated={(data) => {
+            setToast({ visible: true, message: data.message || 'Blueprint created', type: 'success' });
+          }}
+        />
+      )}
 
       {/* Error panel */}
       {run.error_message && (

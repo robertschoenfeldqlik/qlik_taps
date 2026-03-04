@@ -6,6 +6,7 @@ import BuilderPage from './pages/BuilderPage';
 import TapsPage from './pages/TapsPage';
 import RunDetailPage from './pages/RunDetailPage';
 import DeployPage from './pages/DeployPage';
+import BlueprintsPage from './pages/BlueprintsPage';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
               <Route path="/taps" element={<TapsPage />} />
               <Route path="/taps/runs/:id" element={<RunDetailPage />} />
               <Route path="/deploy" element={<DeployPage />} />
+              <Route path="/blueprints" element={<BlueprintsPage />} />
               {/* Redirects for old bookmarks */}
               <Route path="/connectors" element={<Navigate to="/" replace />} />
               <Route path="/configs/new" element={<Navigate to="/" replace />} />

@@ -8,6 +8,8 @@ Supported methods:
   - oauth2:       OAuth 2.0 Client Credentials or Refresh Token flow
 """
 
+import json
+import sys
 import time
 import logging
 
@@ -143,6 +145,9 @@ class OAuth2Auth:
 
         resp = requests.post(self.token_url, data=payload, timeout=30)
 
+        # Emit HTTP metadata for the token exchange (auth handshake)
+        self._emit_token_meta(resp, payload)
+
         if resp.status_code != 200:
             raise AuthError(
                 f"OAuth2 token request failed ({resp.status_code}): {resp.text}"
@@ -175,6 +180,51 @@ class OAuth2Auth:
         """Force a token refresh on next request (e.g., after a 401)."""
         self._access_token = None
         self._token_expires_at = 0
+
+    @staticmethod
+    def _emit_token_meta(resp, payload):
+        """Emit HTTP metadata for OAuth2 token exchange to stderr.
+
+        Secrets (client_secret, tokens) are masked in the emitted metadata.
+        """
+        try:
+            # Mask secrets in payload before emitting
+            safe_payload = {k: ("***" if "secret" in k or "token" in k or "password" in k
+                                else v)
+                           for k, v in payload.items()}
+
+            # Mask token values in response body
+            body_preview = ""
+            try:
+                body = resp.json()
+                safe_body = {k: ("***" if "token" in k or "secret" in k
+                                 else v)
+                            for k, v in body.items()}
+                body_preview = json.dumps(safe_body)[:2000]
+            except Exception:
+                pass
+
+            meta = {
+                "timestamp": time.time(),
+                "elapsed_ms": round(resp.elapsed.total_seconds() * 1000, 1),
+                "is_auth_exchange": True,
+                "request": {
+                    "method": "POST",
+                    "url": str(resp.request.url),
+                    "headers": dict(resp.request.headers),
+                    "body_params": safe_payload,
+                },
+                "response": {
+                    "status_code": resp.status_code,
+                    "headers": dict(resp.headers),
+                    "content_type": resp.headers.get("Content-Type", ""),
+                    "body_size": len(resp.content),
+                    "body_preview": body_preview,
+                },
+            }
+            print(f"HTTP_META:{json.dumps(meta)}", file=sys.stderr, flush=True)
+        except Exception:
+            pass  # Never break auth flow for metadata
 
 
 def build_auth(config):

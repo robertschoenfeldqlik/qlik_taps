@@ -294,19 +294,10 @@ router.post('/:id/duplicate', async (req, res) => {
   }
 });
 
-// Human-readable labels for secret fields
-const SECRET_LABELS = {
-  api_key: 'API Key',
-  bearer_token: 'Bearer Token',
-  password: 'Password',
-  client_secret: 'Client Secret',
-  oauth2_client_secret: 'OAuth2 Client Secret',
-  oauth2_refresh_token: 'OAuth2 Refresh Token',
-};
-
 // ---------------------------------------------------------------------------
 // GET /api/configs/:id/export — Download config as deployment zip
 //   Same format as /api/deploy/export-package (manifest.json + configs/)
+//   Secrets are always stripped — must be entered locally after import.
 // ---------------------------------------------------------------------------
 router.get('/:id/export', async (req, res) => {
   try {
@@ -330,15 +321,7 @@ router.get('/:id/export', async (req, res) => {
     const isDynamics = configJson.tap_type === 'dynamics365' ||
       (configJson.environment_url && configJson.tenant_id);
 
-    // Detect required secrets (non-empty sensitive fields)
-    const requiredSecrets = [];
-    for (const field of SENSITIVE_FIELDS) {
-      if (configJson[field] && typeof configJson[field] === 'string' && configJson[field].length > 0) {
-        requiredSecrets.push({ field, label: SECRET_LABELS[field] || field });
-      }
-    }
-
-    // Strip secrets from config
+    // Strip secrets — never exported
     const sanitized = { ...configJson };
     for (const field of SENSITIVE_FIELDS) {
       if (sanitized[field] && typeof sanitized[field] === 'string') {
@@ -360,7 +343,6 @@ router.get('/:id/export', async (req, res) => {
         auth_method: isDynamics ? 'oauth2_azure' : (configJson.auth_method || 'no_auth'),
         api_url: isDynamics ? (configJson.environment_url || '') : (configJson.api_url || ''),
         stream_count: (configJson.streams || []).length,
-        required_secrets: requiredSecrets,
         config_file: configFilename,
       }],
     };

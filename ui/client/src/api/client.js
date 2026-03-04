@@ -54,4 +54,23 @@ export const getMockInfo = () => api.get('/mock/');
 // ---- Targets ----
 export const getTargets = () => api.get('/taps/targets');
 
+// ---- Deploy Package ----
+export const exportPackage = () =>
+  api.post('/deploy/export-package', {}, { responseType: 'blob' });
+export const previewPackage = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/deploy/preview-package', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+export const importPackage = (file, secrets) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('secrets', JSON.stringify(secrets));
+  return api.post('/deploy/import-package', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
 export default api;

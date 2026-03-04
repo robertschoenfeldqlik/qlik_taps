@@ -7,6 +7,7 @@ const { getDb } = require('./database/init');
 const configsRouter = require('./routes/configs');
 const githubRouter = require('./routes/github');
 const tapsRouter = require('./routes/taps');
+const deployRouter = require('./routes/deploy');
 const mockRouter = require('./routes/mock');
 
 const app = express();
@@ -79,6 +80,7 @@ app.use('/api/github', apiLimiter, githubRouter);
 app.use('/api/taps/discover', tapLimiter);
 app.use('/api/taps/run', tapLimiter);
 app.use('/api/taps', apiLimiter, tapsRouter);
+app.use('/api/deploy', apiLimiter, deployRouter);
 
 // Mock API — built-in test endpoints for tap development
 if (process.env.MOCK_API_ENABLED !== 'false') {

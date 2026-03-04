@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Database, Settings, Play, Plug } from 'lucide-react';
+import { Database, Settings, Play, Plug, Package } from 'lucide-react';
 
 const navLinks = [
   { to: '/', icon: Plug, label: 'Connectors' },
   { to: '/taps', icon: Play, label: 'Run Taps' },
+  { to: '/deploy', icon: Package, label: 'Deploy' },
 ];
 
 export default function Sidebar() {

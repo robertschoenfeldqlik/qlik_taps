@@ -4,7 +4,7 @@ const multer = require('multer');
 const AdmZip = require('adm-zip');
 const path = require('path');
 const { getDb, saveDb } = require('../database/init');
-const { encryptConfig, decryptConfig } = require('../crypto');
+const { encryptConfig, decryptConfig, SENSITIVE_FIELDS } = require('../crypto');
 
 const router = express.Router();
 
@@ -294,8 +294,19 @@ router.post('/:id/duplicate', async (req, res) => {
   }
 });
 
+// Human-readable labels for secret fields
+const SECRET_LABELS = {
+  api_key: 'API Key',
+  bearer_token: 'Bearer Token',
+  password: 'Password',
+  client_secret: 'Client Secret',
+  oauth2_client_secret: 'OAuth2 Client Secret',
+  oauth2_refresh_token: 'OAuth2 Refresh Token',
+};
+
 // ---------------------------------------------------------------------------
-// GET /api/configs/:id/export — Download config as JSON (decrypted)
+// GET /api/configs/:id/export — Download config as deployment zip
+//   Same format as /api/deploy/export-package (manifest.json + configs/)
 // ---------------------------------------------------------------------------
 router.get('/:id/export', async (req, res) => {
   try {
@@ -304,7 +315,7 @@ router.get('/:id/export', async (req, res) => {
     }
 
     const db = await getDb();
-    const stmt = db.prepare('SELECT name, config_json FROM configs WHERE id = ?');
+    const stmt = db.prepare('SELECT name, description, config_json FROM configs WHERE id = ?');
     stmt.bind([req.params.id]);
 
     if (!stmt.step()) {
@@ -315,12 +326,52 @@ router.get('/:id/export', async (req, res) => {
     const row = stmt.getAsObject();
     stmt.free();
 
-    const filename = `${row.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_config.json`;
     const configJson = decryptConfig(JSON.parse(row.config_json));
+    const isDynamics = configJson.tap_type === 'dynamics365' ||
+      (configJson.environment_url && configJson.tenant_id);
 
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(JSON.stringify(configJson, null, 2));
+    // Detect required secrets (non-empty sensitive fields)
+    const requiredSecrets = [];
+    for (const field of SENSITIVE_FIELDS) {
+      if (configJson[field] && typeof configJson[field] === 'string' && configJson[field].length > 0) {
+        requiredSecrets.push({ field, label: SECRET_LABELS[field] || field });
+      }
+    }
+
+    // Strip secrets from config
+    const sanitized = { ...configJson };
+    for (const field of SENSITIVE_FIELDS) {
+      if (sanitized[field] && typeof sanitized[field] === 'string') {
+        sanitized[field] = '';
+      }
+    }
+
+    const configFilename = row.name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase().slice(0, 80) + '.json';
+    const zipFilename = `${row.name.replace(/[^a-zA-Z0-9_-]/g, '_')}_package.zip`;
+
+    const manifest = {
+      version: '1.0',
+      exported_at: new Date().toISOString(),
+      app_version: 'tap-builder-1.0',
+      configs: [{
+        name: row.name,
+        description: row.description || '',
+        tap_type: isDynamics ? 'dynamics365' : 'rest_api',
+        auth_method: isDynamics ? 'oauth2_azure' : (configJson.auth_method || 'no_auth'),
+        api_url: isDynamics ? (configJson.environment_url || '') : (configJson.api_url || ''),
+        stream_count: (configJson.streams || []).length,
+        required_secrets: requiredSecrets,
+        config_file: configFilename,
+      }],
+    };
+
+    const zip = new AdmZip();
+    zip.addFile('manifest.json', Buffer.from(JSON.stringify(manifest, null, 2), 'utf-8'));
+    zip.addFile(`configs/${configFilename}`, Buffer.from(JSON.stringify(sanitized, null, 2), 'utf-8'));
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+    res.send(zip.toBuffer());
   } catch (err) {
     console.error('Error exporting config:', err);
     res.status(500).json({ error: 'Failed to export config' });

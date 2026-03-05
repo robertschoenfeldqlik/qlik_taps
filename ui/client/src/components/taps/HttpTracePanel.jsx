@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   Globe, ChevronDown, ChevronRight, Clock, ArrowRight,
-  Lock, Unlock, Copy, CheckCircle, Fingerprint,
+  Lock, Unlock, Copy, CheckCircle, Fingerprint, Wand2,
 } from 'lucide-react';
+import StreamAnalysisModal from './StreamAnalysisModal';
 
 const METHOD_COLORS = {
   GET: 'bg-green-50 text-green-700 border-green-200',
@@ -249,13 +250,18 @@ function TraceEntry({ entry, index }) {
   );
 }
 
-export default function HttpTracePanel({ httpMetadata, runId, configName, onBlueprintCreated }) {
+export default function HttpTracePanel({ httpMetadata, runId, configName, onBlueprintCreated, onConfigCreated }) {
   const [expanded, setExpanded] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [blueprintName, setBlueprintName] = useState('');
   const [blueprintDesc, setBlueprintDesc] = useState('');
   const [creating, setCreating] = useState(false);
   const [createResult, setCreateResult] = useState(null);
+
+  // Stream analysis state
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
 
   const metadata = typeof httpMetadata === 'string'
     ? (() => { try { return JSON.parse(httpMetadata); } catch { return null; } })()
@@ -265,6 +271,21 @@ export default function HttpTracePanel({ httpMetadata, runId, configName, onBlue
 
   const authCount = metadata.filter(m => m.is_auth_exchange).length;
   const dataCount = metadata.length - authCount;
+
+  const handleAnalyze = async () => {
+    setAnalyzing(true);
+    try {
+      const { analyzeRun } = await import('../../api/client');
+      const { data } = await analyzeRun(runId);
+      setAnalysisResult(data);
+      setShowAnalysisModal(true);
+    } catch (err) {
+      setAnalysisResult({ error: err.response?.data?.error || 'Failed to analyze', streams: [] });
+      setShowAnalysisModal(true);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleCreateBlueprint = async () => {
     if (!blueprintName.trim()) return;
@@ -314,17 +335,35 @@ export default function HttpTracePanel({ httpMetadata, runId, configName, onBlue
                 </span>
               )}
             </div>
-            <button
-              onClick={() => {
-                setBlueprintName(configName ? `${configName} Blueprint` : 'New Blueprint');
-                setBlueprintDesc('');
-                setCreateResult(null);
-                setShowCreateModal(true);
-              }}
-              className="btn-primary text-xs flex items-center gap-1.5"
-            >
-              <Fingerprint size={14} /> Generate Mock Dataset
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAnalyze}
+                disabled={analyzing}
+                className="btn-primary text-xs flex items-center gap-1.5"
+              >
+                {analyzing ? (
+                  <>
+                    <div className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 size={14} /> Auto-Configure Streams
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setBlueprintName(configName ? `${configName} Blueprint` : 'New Blueprint');
+                  setBlueprintDesc('');
+                  setCreateResult(null);
+                  setShowCreateModal(true);
+                }}
+                className="btn-secondary text-xs flex items-center gap-1.5"
+              >
+                <Fingerprint size={14} /> Generate Mock Dataset
+              </button>
+            </div>
           </div>
 
           {/* Trace entries */}
@@ -333,6 +372,17 @@ export default function HttpTracePanel({ httpMetadata, runId, configName, onBlue
               <TraceEntry key={idx} entry={entry} index={idx} />
             ))}
           </div>
+
+          {/* Stream Analysis Modal */}
+          {showAnalysisModal && (
+            <StreamAnalysisModal
+              isOpen={showAnalysisModal}
+              onClose={() => setShowAnalysisModal(false)}
+              analysisResult={analysisResult}
+              onConfigCreated={onConfigCreated}
+              sourceConfigName={configName}
+            />
+          )}
 
           {/* Create Blueprint Modal */}
           {showCreateModal && (

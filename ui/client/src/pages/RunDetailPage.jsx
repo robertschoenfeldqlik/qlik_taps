@@ -364,6 +364,10 @@ export default function RunDetailPage() {
           onBlueprintCreated={(data) => {
             setToast({ visible: true, message: data.message || 'Blueprint created', type: 'success' });
           }}
+          onConfigCreated={(data) => {
+            setToast({ visible: true, message: `Config "${data.name}" created — opening editor...`, type: 'success' });
+            setTimeout(() => navigate(`/configs/${data.id}/edit`), 1200);
+          }}
         />
       )}
 

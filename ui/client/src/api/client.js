@@ -46,6 +46,8 @@ export const stopTapRun = (runId) =>
   api.post(`/taps/runs/${runId}/stop`);
 export const getRunStreamUrl = (runId) =>
   `/api/taps/runs/${runId}/stream`;
+export const analyzeRun = (runId) =>
+  api.post(`/taps/runs/${runId}/analyze`);
 
 // ---- Mock API ----
 export const getMockStatus = () => api.get('/mock-status');

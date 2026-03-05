@@ -891,6 +891,85 @@ router.post('/runs/:id/stop', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/taps/runs/:id/analyze — Analyze HTTP metadata and suggest streams
+// ---------------------------------------------------------------------------
+router.post('/runs/:id/analyze', async (req, res) => {
+  try {
+    const runId = req.params.id;
+    if (!UUID_RE.test(runId)) {
+      return res.status(400).json({ error: 'Invalid run ID format' });
+    }
+
+    const db = await getDb();
+    const stmt = db.prepare('SELECT config_name, http_metadata FROM tap_runs WHERE id = ?');
+    stmt.bind([runId]);
+    if (!stmt.step()) {
+      stmt.free();
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    const row = stmt.getAsObject();
+    stmt.free();
+
+    if (!row.http_metadata) {
+      return res.status(400).json({ error: 'Run has no HTTP metadata captured' });
+    }
+
+    let rawMeta;
+    try {
+      rawMeta = JSON.parse(row.http_metadata);
+    } catch {
+      return res.status(400).json({ error: 'Could not parse run HTTP metadata' });
+    }
+
+    if (!Array.isArray(rawMeta) || rawMeta.length === 0) {
+      return res.status(400).json({ error: 'Run has no HTTP metadata entries' });
+    }
+
+    // Reuse the anonymize pipeline (same as blueprint creation)
+    const { anonymizeHttpMeta, groupEndpoints } = require('../anonymize');
+    const { analyzeEndpoints } = require('../analyze');
+
+    const anonymized = anonymizeHttpMeta(rawMeta);
+    const endpoints = groupEndpoints(anonymized);
+
+    // Detect API base URL from first non-auth request
+    const firstDataRequest = rawMeta.find(m => !m.is_auth_exchange);
+    let apiBaseUrl = '';
+    if (firstDataRequest?.request?.url) {
+      try {
+        const url = new URL(firstDataRequest.request.url);
+        apiBaseUrl = `${url.protocol}//${url.host}`;
+      } catch { /* ignore */ }
+    }
+
+    // Detect auth method
+    let authMethod = 'no_auth';
+    const firstReq = rawMeta[0]?.request?.headers || {};
+    if (firstReq.Authorization || firstReq.authorization) {
+      const authVal = firstReq.Authorization || firstReq.authorization || '';
+      if (authVal.startsWith('Bearer ')) authMethod = 'bearer_token';
+      else if (authVal.startsWith('Basic ')) authMethod = 'basic';
+    } else if (firstReq['X-API-Key'] || firstReq['x-api-key']) {
+      authMethod = 'api_key';
+    }
+
+    const suggestedStreams = analyzeEndpoints(endpoints, apiBaseUrl);
+
+    res.json({
+      api_base_url: apiBaseUrl,
+      auth_method: authMethod,
+      source_config_name: row.config_name || '',
+      endpoints_analyzed: endpoints.length,
+      total_requests: rawMeta.length,
+      streams: suggestedStreams,
+    });
+  } catch (err) {
+    console.error('Error analyzing run:', err);
+    res.status(500).json({ error: 'Failed to analyze HTTP metadata' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/taps/targets — List available target types
 // ---------------------------------------------------------------------------
 router.get('/targets', (req, res) => {

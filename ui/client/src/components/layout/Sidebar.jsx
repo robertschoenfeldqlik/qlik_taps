@@ -10,7 +10,7 @@ const navLinks = [
 
 export default function Sidebar() {
   return (
-    <aside className="w-56 bg-gradient-to-b from-qlik-navy via-qlik-dark to-qlik-dark text-white flex flex-col shrink-0 border-r border-white/5">
+    <aside className="w-56 bg-gradient-to-b from-qlik-navy to-qlik-dark text-white flex flex-col shrink-0 border-r border-white/5">
       <div className="p-5 border-b border-white/10">
         <h1 className="text-lg font-bold tracking-tight flex items-center gap-2.5">
           <span className="bg-brand-500/20 rounded-lg p-1.5">
@@ -18,10 +18,10 @@ export default function Sidebar() {
           </span>
           <span className="text-gray-100">Tap Builder</span>
         </h1>
-        <p className="text-[11px] text-slate-400 mt-1.5 ml-[38px]">Qlik Singer REST API</p>
+        <p className="text-[11px] text-slate-400 mt-1.5 ml-[38px]">Singer REST API</p>
       </div>
       <nav className="flex-1 py-4 px-2">
-        <p className="px-3 pb-2 text-[11px] font-semibold text-slate-500 uppercase tracking-widest">
+        <p className="px-3 pb-2 text-[11px] font-semibold text-qlik-grey uppercase tracking-widest">
           Navigation
         </p>
         <div className="space-y-1">
@@ -33,7 +33,7 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `relative flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
                   isActive
-                    ? 'bg-brand-600/20 text-brand-300'
+                    ? 'bg-brand-500/15 text-brand-300'
                     : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                 }`
               }
@@ -41,7 +41,7 @@ export default function Sidebar() {
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-brand-400" />
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-brand-500" />
                   )}
                   <Icon size={18} />
                   <span className="font-medium">{label}</span>
@@ -52,7 +52,7 @@ export default function Sidebar() {
         </div>
       </nav>
       <div className="border-t border-white/10 px-4 py-3">
-        <div className="flex items-center gap-2 text-[11px] text-slate-500">
+        <div className="flex items-center gap-2 text-[11px] text-qlik-grey">
           <Settings size={12} />
           tap-rest-api v1.0
         </div>
